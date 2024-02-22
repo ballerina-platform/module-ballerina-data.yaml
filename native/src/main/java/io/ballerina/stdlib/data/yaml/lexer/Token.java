@@ -1,0 +1,67 @@
+package io.ballerina.stdlib.data.yaml.lexer;
+
+public class Token {
+    private TokenType type;
+    private String value;
+    private Indentation indentation = null;
+
+    public Token(TokenType type) {
+        this.type = type;
+    }
+    public Token(TokenType type, String value) {
+        this(type);
+        this.value = value;
+    }
+
+    public Token(TokenType type, String value, Indentation indentation) {
+        this(type, value);
+        this.indentation = indentation;
+    }
+
+    public TokenType getType() {
+        return type;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public enum TokenType {
+        SEQUENCE_ENTRY("-"),
+        MAPPING_KEY("?"),
+        MAPPING_VALUE(":"),
+        SEPARATOR(","),
+        SEQUENCE_START("["),
+        SEQUENCE_END("]"),
+        MAPPING_START("{"),
+        MAPPING_END("}"),
+        DIRECTIVE("%"),
+        ALIAS("*"),
+        ANCHOR("&"),
+        TAG_HANDLE("<tag-handle>"),
+        TAG_PREFIX("<tag-prefix>"),
+        TAG("<tag>"),
+        DOT("."),
+        LITERAL("|"),
+        FOLDED(">"),
+        DECIMAL("<integer>"),
+        SEPARATION_IN_LINE("<separation-in-line>"),
+        DIRECTIVE_MARKER("---"),
+        DOCUMENT_MARKER("..."),
+        DOUBLE_QUOTE_DELIMITER("\""),
+        DOUBLE_QUOTE_CHAR("<double-quoted-scalar>"),
+        SINGLE_QUOTE_DELIMITER("'"),
+        SINGLE_QUOTE_CHAR("<single-quoted-scalar>"),
+        PLANAR_CHAR("<plain-scalar>"),
+        PRINTABLE_CHAR("<printable-char>"),
+        INDENTATION_INDICATOR("<indentation-indicator>"),
+        CHOMPING_INDICATOR("<chomping-indicator>"),
+        EMPTY_LINE("<empty-line>"),
+        EOL("<end-of-line>"),
+        COMMENT("<comment>"),
+        TRAILING_COMMENT("<trailing-comment>"),
+        DUMMY("<dummy>");
+        TokenType(String s) {
+        }
+    }
+}
