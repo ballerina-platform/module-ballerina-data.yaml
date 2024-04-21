@@ -16,13 +16,33 @@
 
 import ballerina/jballerina.java;
 
-# Converts YAML string, byte[] or byte-block-stream to subtype of anydata.
+# Converts YAML string to subtype of anydata.
 #
-# + s - Source YAML string value or byte[] or byte-block-stream
+# + s - Source string value
 # + options - Options to be used for filtering in the projection
 # + t - Target type
 # + return - On success, returns the given target type value, else returns an `yaml:Error`
-public isolated function fromYamlStringWithType(string|byte[]|stream<byte[], error?> s,
+public isolated function parseString(string s,
+        Options options = {}, typedesc<anydata> t = <>)
+        returns t|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
+
+# Converts YAML byte[] to subtype of anydata.
+#
+# + s - Source byte[] value
+# + options - Options to be used for filtering in the projection
+# + t - Target type
+# + return - On success, returns the given target type value, else returns an `yaml:Error`
+public isolated function parseBytes(byte[] s,
+        Options options = {}, typedesc<anydata> t = <>)
+        returns t|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
+
+# Converts YAML byte-block-stream to subtype of anydata.
+#
+# + s - Source byte-block-stream value
+# + options - Options to be used for filtering in the projection
+# + t - Target type
+# + return - On success, returns the given target type value, else returns an `yaml:Error`
+public isolated function parseStream(stream<byte[], error?> s,
         Options options = {}, typedesc<anydata> t = <>)
         returns t|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
         

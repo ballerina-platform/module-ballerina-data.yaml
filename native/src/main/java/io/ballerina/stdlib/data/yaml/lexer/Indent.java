@@ -1,12 +1,13 @@
 package io.ballerina.stdlib.data.yaml.lexer;
 
-import java.util.List;
+import io.ballerina.stdlib.data.yaml.common.Types.Collection;
+
 
 public class Indent {
     private int column;
-    private Indentation.Collection collection;
+    private Collection collection;
 
-    public Indent(int column, Indentation.Collection collection) {
+    public Indent(int column, Collection collection) {
         this.column = column;
         this.collection = collection;
     }
@@ -19,11 +20,11 @@ public class Indent {
         this.column = column;
     }
 
-    public Indentation.Collection getCollection() {
+    public Collection getCollection() {
         return collection;
     }
 
-    public void setCollection(Indentation.Collection collection) {
+    public void setCollection(Collection collection) {
         this.collection = collection;
     }
 }

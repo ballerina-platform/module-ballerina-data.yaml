@@ -26,6 +26,14 @@ public class Token {
         return value;
     }
 
+    public Indentation getIndentation() {
+        return indentation;
+    }
+
+    public void setIndentation(Indentation indentation) {
+        this.indentation = indentation;
+    }
+
     public enum TokenType {
         SEQUENCE_ENTRY("-"),
         MAPPING_KEY("?"),
