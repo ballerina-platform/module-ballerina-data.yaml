@@ -175,14 +175,7 @@ public class Utils {
     }
 
     public static boolean checkCharacters(LexerState sm, List<Character> expectedChars) {
-        return checkCharacters(sm, expectedChars, -1);
-    }
-
-    public static boolean checkCharacters(LexerState sm, List<Character> expectedChars, int column) {
-        if (column == -1) {
-            column = sm.getColumn();
-        }
-        return expectedChars.contains((char) sm.peek(column));
+        return expectedChars.contains((char) sm.peek());
     }
 
     public static boolean isComment(LexerState sm) {

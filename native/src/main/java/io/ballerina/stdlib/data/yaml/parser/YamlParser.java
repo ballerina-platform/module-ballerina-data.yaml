@@ -1365,7 +1365,7 @@ public class YamlParser {
                 chompingIndicator = state.getCurrentToken().getValue();
                 getNextToken(state, List.of(EOL));
 
-                if (state.getLineIndex() < state.getNumLines() - 1) {
+                if (state.getLexerState().isEndOfStream()) {
                     try {
                         state.initLexer();
                     } catch (Exception ex) {
@@ -1415,7 +1415,7 @@ public class YamlParser {
                 }
                 case EOL -> {
                     // Terminate at the end of the line
-                    if (state.getLineIndex() == state.getNumLines() - 1) {
+                    if (state.getLexerState().isEndOfStream()) {
                         terminated = true;
                         break;
                     }
@@ -1429,7 +1429,7 @@ public class YamlParser {
                     if (!isFirstLine) {
                         newLineBuffer.append("\n");
                     }
-                    if (state.getLineIndex() == state.getNumLines() - 1) {
+                    if (state.getLexerState().isEndOfStream()) {
                         terminated = true;
                         break;
                     }
@@ -1445,7 +1445,7 @@ public class YamlParser {
                     state.getLexerState().setTrailingComment(true);
 
                     // Terminate at the end of the line
-                    if (state.getLineIndex() == state.getNumLines() - 1) {
+                    if (state.getLexerState().isEndOfStream()) {
                         getNextToken(state);
                         terminated = true;
                         break;
