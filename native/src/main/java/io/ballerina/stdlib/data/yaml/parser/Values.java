@@ -172,7 +172,7 @@ public class Values {
         Object currentJson = state.currentYamlNode;
         int valueTypeTag = TypeUtils.getType(currentJson).getTag();
         if (valueTypeTag == TypeTags.MAP_TAG || valueTypeTag == TypeTags.RECORD_TYPE_TAG) {
-            ((BMap<BString, Object>) currentJson).put(StringUtils.fromString(state.fieldNames.peek()), nextMapValue);
+            ((BMap<BString, Object>) currentJson).put(StringUtils.fromString(state.fieldNames.pop()), nextMapValue);
         }
         return Optional.of(nextMapValue);
     }

@@ -99,7 +99,7 @@ public class LexerState {
     }
 
     public void forward() {
-        forward(1);
+        eofStream = characterReader.forward(1);
     }
 
     public void forward(int k) {
@@ -751,9 +751,9 @@ public class LexerState {
             // Terminating delimiter
             if (lexerState.peek() == '\"') {
                 IndentUtils.handleMappingValueIndent(lexerState, DOUBLE_QUOTE_DELIMITER);
-                if (lexerState.peek(1) == -1) {
-                    lexerState.setEofStream(true);
-                }
+//                if (lexerState.peek(1) == -1) {
+//                    lexerState.setEofStream(true);
+//                }
                 return this;
             }
 
@@ -809,9 +809,9 @@ public class LexerState {
                     return this;
                 }
                 IndentUtils.handleMappingValueIndent(lexerState, SINGLE_QUOTE_DELIMITER);
-                if (lexerState.peek(1) == -1) {
-                    lexerState.setEofStream(true);
-                }
+//                if (lexerState.peek(1) == -1) {
+//                    lexerState.setEofStream(true);
+//                }
                 return this;
             }
 

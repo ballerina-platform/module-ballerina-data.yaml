@@ -47,20 +47,13 @@ public class CharacterReader {
     }
 
     /**
-     * Moves the internal pointer forward by one.
-     *
-     */
-    public void forward() {
-        forward(1);
-    }
-
-    /**
      * Moves the internal pointer forward by the specified amount (`k`).
      *
      * @param k The number of positions to move forward.
      */
-    public void forward(int k) {
-        for (int i = 0; i < k && checkAndReadData(k); i++) {
+    public boolean forward(int k) {
+        int i;
+        for (i = 0; i < k && checkAndReadData(k); i++) {
             int codePoint = dataBuffer[pointer++];
             updateIndex(1);
             if (hasNewLine(codePoint)) {
@@ -71,6 +64,7 @@ public class CharacterReader {
                 this.column++;
             }
         }
+        return i == 0;
     }
 
     private void updateIndex(int size) {

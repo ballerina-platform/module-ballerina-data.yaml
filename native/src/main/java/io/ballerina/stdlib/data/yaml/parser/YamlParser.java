@@ -155,7 +155,6 @@ public class YamlParser {
             if (parentNodeTypeTag == TypeTags.RECORD_TYPE_TAG || parentNodeTypeTag == TypeTags.MAP_TAG) {
                 int currentYamlNodeTypeTag = TypeUtils.getReferredType(TypeUtils.getType(currentYamlNode)).getTag();
                 if (currentYamlNodeTypeTag == TypeTags.ARRAY_TAG || currentYamlNodeTypeTag == TypeTags.TUPLE_TAG) {
-                    expectedTypes.pop();
                     ((BMap<BString, Object>) parentNode).put(StringUtils.fromString(this.fieldNames.pop()),
                             currentYamlNode);
                 }
@@ -506,10 +505,11 @@ public class YamlParser {
                 Object value = handleEvent(state, event, true);
                 if (value instanceof String scalarValue) {
                     Type expType = state.expectedTypes.pop();
-                    if (expType == null) {
+                    if (expType == null && state.currentField == null) {
+                        state.fieldNames.pop();
+                    } else if (expType == null) {
                         break;
-                    }
-                    if (state.jsonFieldDepth > 0 || state.currentField != null) {
+                    } else if (state.jsonFieldDepth > 0 || state.currentField != null) {
                         state.currentYamlNode = Values.convertAndUpdateCurrentValueNode(state,
                                 StringUtils.fromString(scalarValue), expType);
                     } else if (state.restType.peek() != null) {
