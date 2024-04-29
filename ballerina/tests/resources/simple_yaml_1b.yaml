@@ -1,0 +1,4 @@
+{
+name: "Jhon",
+description: "This is a multiline\nstring in YAML.\nIt preserves line breaks.\n",
+age: 30 }

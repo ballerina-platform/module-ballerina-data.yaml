@@ -8,7 +8,7 @@ public class ModuleUtils {
     /**
      * Time standard library package ID.
      */
-    private static Module module = new Module("ballerina", "data.yaml");
+    private static Module module;
 
     private ModuleUtils() {
     }

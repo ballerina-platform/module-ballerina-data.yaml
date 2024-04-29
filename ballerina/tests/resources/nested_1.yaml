@@ -1,0 +1,17 @@
+name: "YAML Test"
+employees:
+  - name: 'Alice'
+    age: 30
+    department: HR
+    projects: [ {
+      name: "Project A",
+      status: "In Progress"},
+      { name: Project B, status: "Completed" }
+    ]
+  - name: Bob
+    age: 35
+    department: Engineering
+    projects:
+      - name: Project C
+        status: "Pending"
+      - { name: Project D, status: "In Progress" }

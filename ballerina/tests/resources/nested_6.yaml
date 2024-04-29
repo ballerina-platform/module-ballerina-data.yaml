@@ -1,0 +1,24 @@
+bookings:
+  - event: "RockFest 2024"
+    date: "2024-07-15"
+    venue: "Central Park Stadium"
+    location: "New York City, NY"
+    seat: 5
+    price: 75.00
+    attendee:
+      name: "John Doe"
+      email: "john.doe@example.com"
+      phone: "555-555-5555"
+    notes: "Please arrive at least 30 minutes before the concert starts."
+
+  - event: "PopJam 2024"
+    date: "2024-08-20"
+    venue: "Downtown Arena"
+    location: "Los Angeles, CA"
+    seat: 12
+    price: 150.00
+    attendee:
+      name: "Jane Smith"
+      email: "jane.smith@example.com"
+      phone: "555-123-4567"
+    notes: "Concert starts at 8:00 PM. No outside food or drinks allowed."

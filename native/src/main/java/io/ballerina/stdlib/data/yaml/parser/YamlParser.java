@@ -114,9 +114,9 @@ public class YamlParser {
         }
 
         private void finalizeArrayObject() {
-            int currentIndex = arrayIndexes.pop();
+            arrayIndexes.pop();
             finalizeObject();
-            Values.validateListSize(currentIndex, expectedTypes.pop());
+            expectedTypes.pop();
         }
 
         private void finalizeNonArrayObject() {
@@ -172,7 +172,9 @@ public class YamlParser {
                     }
                     ((BArray) parentNode).add(arrayIndexes.peek(), currentYamlNode);
                 }
-                case TypeTags.TUPLE_TAG -> ((BArray) parentNode).add(arrayIndexes.peek(), currentYamlNode);
+                case TypeTags.TUPLE_TAG -> {
+                    ((BArray) parentNode).add(arrayIndexes.peek(), currentYamlNode);
+                }
                 default -> {
                 }
             }
@@ -196,8 +198,11 @@ public class YamlParser {
                     arrayIndexes.push(0);
                     possibleYamlStream = true;
                 }
-                case TypeTags.NULL_TAG, TypeTags.BOOLEAN_TAG, TypeTags.INT_TAG, TypeTags.FLOAT_TAG,
-                        TypeTags.DECIMAL_TAG, TypeTags.STRING_TAG ->
+                case TypeTags.NULL_TAG, TypeTags.BOOLEAN_TAG, TypeTags.INT_TAG, TypeTags.BYTE_TAG,
+                        TypeTags.SIGNED8_INT_TAG, TypeTags.SIGNED16_INT_TAG, TypeTags.SIGNED32_INT_TAG,
+                        TypeTags.UNSIGNED8_INT_TAG, TypeTags.UNSIGNED16_INT_TAG, TypeTags.UNSIGNED32_INT_TAG,
+                        TypeTags.FLOAT_TAG, TypeTags.DECIMAL_TAG, TypeTags.CHAR_STRING_TAG, TypeTags.STRING_TAG,
+                        TypeTags.FINITE_TYPE_TAG ->
                         expectedTypes.push(type);
                 case TypeTags.JSON_TAG, TypeTags.ANYDATA_TAG -> {
                     expectedTypes.push(type);
@@ -272,7 +277,7 @@ public class YamlParser {
 
         if (eventKind == ParserEvent.EventKind.ALIAS_EVENT) {
             ParserEvent.AliasEvent aliasEvent = (ParserEvent.AliasEvent) event;
-            String alias = state.anchorBuffer.get(aliasEvent.getAnchor());
+            String alias = state.anchorBuffer.get(aliasEvent.getAlias());
             if (alias == null) {
                 throw new RuntimeException("The anchor does not exist");
             }
@@ -383,9 +388,9 @@ public class YamlParser {
                     state.updateIndexOfArrayElement();
                 }
                 firstElement = false;
-                Object value = handleEvent(state, event, true);
                 state.expectedTypes.push(Values.getMemberType(state.expectedTypes.peek(),
                         state.arrayIndexes.peek()));
+                Object value = handleEvent(state, event, true);
                 if (value instanceof String scalarValue) {
                     processValue(state, scalarValue);
                 }
@@ -473,6 +478,7 @@ public class YamlParser {
                 }
                 state.expectedTypes.push(fieldType);
             } else if (state.expectedTypes.peek() == null) {
+                state.currentField = null;
                 state.expectedTypes.push(null);
             }
             state.fieldNames.push(key);
@@ -900,7 +906,7 @@ public class YamlParser {
     }
 
     private static ParserEvent nodeComplete(ParserState state, ParserUtils.ParserOption option) {
-        return null;
+        return nodeComplete(state, option, new TagStructure());
     }
 
     private static ParserEvent nodeComplete(ParserState state, ParserUtils.ParserOption option,
@@ -942,21 +948,19 @@ public class YamlParser {
                 separate(state);
 
                 // Obtain the tag if there exists
-                List<String> tuple = nodeTag(state);
-                String tagHandle = tuple.get(0);
-                String tagPrefix = tuple.get(1);
+                TagDetails tagDetails = nodeTag(state);
 
                 // Construct the complete tag
-                if (tagPrefix != null) {
-                    tagStructure.tag = tagHandle == null ? tagPrefix :
-                            generateCompleteTagName(state, tagHandle, tagPrefix);
+                if (tagDetails.tagPrefix != null) {
+                    tagStructure.tag = tagDetails.tagHandle == null ? tagDetails.tagPrefix :
+                            generateCompleteTagName(state, tagDetails.tagHandle, tagDetails.tagPrefix);
                 }
             }
         }
         return appendData(state, option, false, tagStructure, definedProperties);
     }
 
-    private static List<String> nodeTag(ParserState state) {
+    private static TagDetails nodeTag(ParserState state) {
         String tagPrefix = null;
         String tagHandle = null;
         switch (state.getBufferedToken().getType()) {
@@ -975,8 +979,12 @@ public class YamlParser {
                 separate(state);
             }
         }
-        return List.of(tagHandle, tagPrefix);
+        return new TagDetails(tagPrefix, tagHandle);
     }
+
+    record TagDetails(String tagPrefix, String tagHandle) {
+    }
+
 
     private static String nodeAnchor(ParserState state) {
         String anchor = null;
@@ -1214,7 +1222,7 @@ public class YamlParser {
                             newNodeTagStructure);
                 }
                 case INDENT_DECREASE -> { // Decreased
-                    buffer = new ParserEvent.EndEvent(indentation.getCollection().remove(collectionSize - 1));
+                    buffer = new ParserEvent.EndEvent(indentation.getCollection().remove(0));
                     for (Collection collection: indentation.getCollection()) {
                         state.getEventBuffer().add(new ParserEvent.EndEvent(collection));
                     }
@@ -1575,7 +1583,7 @@ public class YamlParser {
                     newLineBuffer.append("\n");
                     getNextToken(state);
                     // Terminate at the end of the line
-                    if (state.getLineIndex() == state.getNumLines() - 1) {
+                    if (state.getLexerState().isEndOfStream()) {
                         terminate = true;
                         break;
                     }
