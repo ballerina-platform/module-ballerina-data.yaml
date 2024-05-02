@@ -19,8 +19,6 @@
 package io.ballerina.stdlib.data.yaml;
 
 import io.ballerina.runtime.api.Environment;
-import io.ballerina.runtime.api.types.Type;
-import io.ballerina.runtime.api.utils.TypeUtils;
 import io.ballerina.runtime.api.values.BArray;
 import io.ballerina.runtime.api.values.BError;
 import io.ballerina.runtime.api.values.BMap;
@@ -28,8 +26,6 @@ import io.ballerina.runtime.api.values.BStream;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.runtime.api.values.BTypedesc;
 import io.ballerina.stdlib.data.yaml.parser.YamlParser;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
@@ -44,23 +40,18 @@ public class Native {
 
     public static Object parseString(BString yaml, BMap<BString, Object> options, BTypedesc typed) {
         try {
-            Type expType = TypeUtils.getReferredType(typed.getDescribingType());
-            return YamlParser.parse(new StringReader(yaml.getValue()), expType);
+            return YamlParser.parse(new StringReader(yaml.getValue()), typed.getDescribingType());
         } catch (BError e) {
             return e;
-        } catch (Exception e) {
-            return DiagnosticLog.error(DiagnosticErrorCode.YAML_PARSER_EXCEPTION, e.getMessage());
         }
     }
 
     public static Object parseBytes(BArray yaml, BMap<BString, Object> options, BTypedesc typed) {
         try {
-            Type expType = TypeUtils.getReferredType(typed.getDescribingType());
-            return YamlParser.parse(new InputStreamReader(new ByteArrayInputStream(yaml.getBytes())), expType);
+            return YamlParser.parse(new InputStreamReader(new ByteArrayInputStream(yaml.getBytes())),
+                    typed.getDescribingType());
         } catch (BError e) {
             return e;
-        } catch (Exception e) {
-            return DiagnosticLog.error(DiagnosticErrorCode.YAML_PARSER_EXCEPTION, e.getMessage());
         }
     }
 

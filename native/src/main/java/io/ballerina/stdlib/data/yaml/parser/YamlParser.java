@@ -1,5 +1,6 @@
 package io.ballerina.stdlib.data.yaml.parser;
 
+import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.api.TypeTags;
 import io.ballerina.runtime.api.flags.SymbolFlags;
 import io.ballerina.runtime.api.types.ArrayType;
@@ -7,7 +8,6 @@ import io.ballerina.runtime.api.types.Field;
 import io.ballerina.runtime.api.types.MapType;
 import io.ballerina.runtime.api.types.RecordType;
 import io.ballerina.runtime.api.types.Type;
-import io.ballerina.runtime.api.types.UnionType;
 import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.utils.TypeUtils;
 import io.ballerina.runtime.api.values.BArray;
@@ -63,8 +63,6 @@ import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPE
 import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_SEQUENCE_ENTRY;
 import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_SEQUENCE_VALUE;
 import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.getAllFieldsInRecord;
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.isSupportedUnionType;
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.possibleYamlStream;
 
 public class YamlParser {
 
@@ -83,29 +81,21 @@ public class YamlParser {
         Object currentYamlNode;
 
         Field currentField;
-        Deque<String> fieldNames = new ArrayDeque<>();
+//        Deque<String> fieldNames = new ArrayDeque<>();
         Deque<Object> nodesStack = new ArrayDeque<>();
         Stack<Map<String, Field>> fieldHierarchy = new Stack<>();
         Stack<Map<String, Field>> visitedFieldHierarchy = new Stack<>();
         Stack<Type> restType = new Stack<>();
         Stack<Type> expectedTypes = new Stack<>();
+        Stack<Stack<String>> fieldNameHierarchy = new Stack<>();
         int jsonFieldDepth = 0;
         Stack<Integer> arrayIndexes = new Stack<>();
-        boolean possibleYamlStream = false;
+        Stack<ParserContext> parserContexts = new Stack<>();
+        int unionDepth = 0;
         boolean rootValueInitialized = false;
 
         public ComposerState(ParserState parserState) {
             this.parserState = parserState;
-        }
-
-        public void updateExpectedType(Map<String, Field> fields, Type restType) {
-            this.fieldHierarchy.push(new HashMap<>(fields));
-            this.visitedFieldHierarchy.push(new HashMap<>());
-            this.restType.push(restType);
-        }
-
-        public void finalizeNonArrayObjectAndRemoveExpectedType() {
-            finalizeNonArrayObject();
         }
 
         private void updateIndexOfArrayElement() {
@@ -113,10 +103,37 @@ public class YamlParser {
             arrayIndexes.push(arrayIndex + 1);
         }
 
-        private void finalizeArrayObject() {
+        public void updateFieldHierarchiesAndRestType(Map<String, Field> fields, Type restType) {
+            this.fieldHierarchy.push(new HashMap<>(fields));
+            this.visitedFieldHierarchy.push(new HashMap<>());
+            this.restType.push(restType);
+            this.fieldNameHierarchy.push(new Stack<>());
+        }
+
+        private void checkUnionAndFinalizeArrayObject() {
             arrayIndexes.pop();
+            if (unionDepth > 0) {
+                finalizeObject();
+                return;
+            }
+            finalizeArrayObjectAndRemoveExpectedType();
+        }
+
+        public void checkUnionAndFinalizeNonArrayObject() {
+            if (unionDepth > 0) {
+                fieldNameHierarchy.pop();
+                finalizeObject();
+            }
+            finalizeNonArrayObjectAndRemoveExpectedType();
+        }
+
+        private void finalizeArrayObjectAndRemoveExpectedType() {
             finalizeObject();
             expectedTypes.pop();
+        }
+
+        public void finalizeNonArrayObjectAndRemoveExpectedType() {
+            finalizeNonArrayObject();
         }
 
         private void finalizeNonArrayObject() {
@@ -125,11 +142,14 @@ public class YamlParser {
             }
 
             if (!expectedTypes.isEmpty() && expectedTypes.peek() == null) {
+                parserContexts.pop();
+                fieldNameHierarchy.pop();
                 return;
             }
 
             Map<String, Field> remainingFields = fieldHierarchy.pop();
             visitedFieldHierarchy.pop();
+            fieldNameHierarchy.pop();
             restType.pop();
             for (Field field : remainingFields.values()) {
                 if (SymbolFlags.isFlagOn(field.getFlags(), SymbolFlags.REQUIRED)) {
@@ -139,7 +159,21 @@ public class YamlParser {
             finalizeObject();
         }
 
+        private Object verifyAndConvertToUnion(Object json) {
+            if (unionDepth > 0) {
+                return json;
+            }
+            return new Object(); // TODO:
+        }
+
         private void finalizeObject() {
+            parserContexts.pop();
+
+            if (unionDepth > 0) {
+                unionDepth--;
+                currentYamlNode = verifyAndConvertToUnion(currentYamlNode);
+            }
+
             // Skip the value and continue to next state.
             if (!expectedTypes.isEmpty() && expectedTypes.peek() == null) {
                 return;
@@ -153,11 +187,8 @@ public class YamlParser {
             Type parentNodeType = TypeUtils.getType(parentNode);
             int parentNodeTypeTag = TypeUtils.getReferredType(parentNodeType).getTag();
             if (parentNodeTypeTag == TypeTags.RECORD_TYPE_TAG || parentNodeTypeTag == TypeTags.MAP_TAG) {
-                int currentYamlNodeTypeTag = TypeUtils.getReferredType(TypeUtils.getType(currentYamlNode)).getTag();
-                if (currentYamlNodeTypeTag == TypeTags.ARRAY_TAG || currentYamlNodeTypeTag == TypeTags.TUPLE_TAG) {
-                    ((BMap<BString, Object>) parentNode).put(StringUtils.fromString(this.fieldNames.pop()),
+                    ((BMap<BString, Object>) parentNode).put(StringUtils.fromString(fieldNameHierarchy.peek().pop()),
                             currentYamlNode);
-                }
                 currentYamlNode = parentNode;
                 return;
             }
@@ -185,51 +216,40 @@ public class YamlParser {
 
         public void handleExpectedType(Type type) {
             switch (type.getTag()) {
-                // TODO: Handle readonly and singleton type as expType.
                 case TypeTags.RECORD_TYPE_TAG -> {
                     RecordType recordType = (RecordType) type;
                     expectedTypes.add(recordType);
-                    fieldHierarchy.push(getAllFieldsInRecord(recordType));
-                    visitedFieldHierarchy.push(new HashMap<>());
-                    restType.push(recordType.getRestFieldType());
+                    updateFieldHierarchiesAndRestType(getAllFieldsInRecord(recordType), recordType.getRestFieldType());
                 }
                 case TypeTags.ARRAY_TAG, TypeTags.TUPLE_TAG -> {
                     expectedTypes.add(type);
                     arrayIndexes.push(0);
-                    possibleYamlStream = true;
                 }
                 case TypeTags.NULL_TAG, TypeTags.BOOLEAN_TAG, TypeTags.INT_TAG, TypeTags.BYTE_TAG,
                         TypeTags.SIGNED8_INT_TAG, TypeTags.SIGNED16_INT_TAG, TypeTags.SIGNED32_INT_TAG,
                         TypeTags.UNSIGNED8_INT_TAG, TypeTags.UNSIGNED16_INT_TAG, TypeTags.UNSIGNED32_INT_TAG,
                         TypeTags.FLOAT_TAG, TypeTags.DECIMAL_TAG, TypeTags.CHAR_STRING_TAG, TypeTags.STRING_TAG,
-                        TypeTags.FINITE_TYPE_TAG ->
+                        TypeTags.FINITE_TYPE_TAG, TypeTags.UNION_TAG ->
                         expectedTypes.push(type);
                 case TypeTags.JSON_TAG, TypeTags.ANYDATA_TAG -> {
                     expectedTypes.push(type);
-                    fieldHierarchy.push(new HashMap<>());
-                    visitedFieldHierarchy.push(new HashMap<>());
-                    restType.push(type);
-                    possibleYamlStream = true;
+                    updateFieldHierarchiesAndRestType(new HashMap<>(), type);
                 }
                 case TypeTags.MAP_TAG -> {
                     expectedTypes.push(type);
-                    fieldHierarchy.push(new HashMap<>());
-                    visitedFieldHierarchy.push(new HashMap<>());
-                    restType.push(((MapType) type).getConstrainedType());
+                    updateFieldHierarchiesAndRestType(new HashMap<>(), ((MapType) type).getConstrainedType());
                 }
-                case TypeTags.UNION_TAG -> {
-                    if (isSupportedUnionType((UnionType) type)) {
-                        expectedTypes.push(type);
-                        if (possibleYamlStream((UnionType) type)) {
-                            possibleYamlStream = true;
-                        }
-                        break;
-                    }
-                    throw DiagnosticLog.error(DiagnosticErrorCode.UNSUPPORTED_TYPE, type);
+                case TypeTags.TYPE_REFERENCED_TYPE_TAG -> {
+                    handleExpectedType(TypeUtils.getReferredType(type));
                 }
                 default -> throw DiagnosticLog.error(DiagnosticErrorCode.UNSUPPORTED_TYPE, type);
             }
         }
+    }
+
+    public enum ParserContext {
+        MAP,
+        ARRAY
     }
 
     /**
@@ -330,26 +350,26 @@ public class YamlParser {
     }
 
     private static void processValue(ComposerState state, String value) {
-        Type expType = state.expectedTypes.pop();
-        BString bString = StringUtils.fromString(value);
-        if (expType == null) {
-            return;
+        Type expType;
+        if (state.unionDepth > 0) {
+            expType = PredefinedTypes.TYPE_JSON;
+        } else {
+            expType = state.expectedTypes.pop();
+            if (expType == null) {
+                return;
+            }
         }
+        BString bString = StringUtils.fromString(value);
         state.currentYamlNode = Values.convertAndUpdateCurrentValueNode(state, bString, expType);
     }
 
     public static Object composeSequence(YamlParser.ComposerState state, boolean flowStyle) {
         boolean firstElement = true;
         if (!state.rootValueInitialized) {
-            Type expType = state.expectedTypes.peek();
-            // In this point we know rhs is json[] or anydata[] hence init index counter.
-            if (expType.getTag() == TypeTags.JSON_TAG || expType.getTag() == TypeTags.ANYDATA_TAG) {
-                state.arrayIndexes.push(0);
-            }
-            state.currentYamlNode = Values.initArrayValue(state.expectedTypes.peek());
+            state.currentYamlNode = Values.initRootArrayValue(state);
             state.rootValueInitialized = true;
         } else {
-            Values.updateNextArrayValue(state);
+            Values.updateNextArrayValueBasedOnExpType(state);
         }
 
         List<Object> sequence = new ArrayList<>();
@@ -388,8 +408,7 @@ public class YamlParser {
                     state.updateIndexOfArrayElement();
                 }
                 firstElement = false;
-                state.expectedTypes.push(Values.getMemberType(state.expectedTypes.peek(),
-                        state.arrayIndexes.peek()));
+                Values.updateExpectedType(state);
                 Object value = handleEvent(state, event, true);
                 if (value instanceof String scalarValue) {
                     processValue(state, scalarValue);
@@ -398,7 +417,7 @@ public class YamlParser {
             }
         }
 
-        state.finalizeArrayObject();
+        state.checkUnionAndFinalizeArrayObject();
 
         return (sequence.size() == 0 && !flowStyle) ? Collections.singletonList(null) : sequence;
     }
@@ -406,12 +425,12 @@ public class YamlParser {
     public static Object composeMapping(ComposerState state, boolean flowStyle, boolean implicitMapping) {
         boolean isParentSequence = false;
         if (!state.rootValueInitialized) {
-            state.currentYamlNode = Values.initRootMapValue(state.expectedTypes.peek());
+            state.currentYamlNode = Values.initRootMapValue(state);
             state.rootValueInitialized = true;
         } else {
             Object currentYamlNode = state.currentYamlNode;
             isParentSequence = TypeUtils.getType(currentYamlNode).getTag() == TypeTags.ARRAY_TAG;
-            Values.updateNextMapValue(state);
+            Values.updateNextMapValueBasedOnExpType(state);
         }
         Map<String, Object> structure = new HashMap<>();
         ParserEvent event = parse(state.parserState, EXPECT_MAP_KEY);
@@ -457,31 +476,7 @@ public class YamlParser {
             if (!state.allowMapEntryRedefinition && structure.containsKey(key.toString())) {
                 throw new RuntimeException("Cannot have duplicate map entries for '${key.toString()}");
             }
-
-            if (state.jsonFieldDepth == 0) {
-                Field currentField;
-                if (state.visitedFieldHierarchy.peek().containsKey(key)) {
-                    currentField = state.visitedFieldHierarchy.peek().get(key);
-                } else {
-                    currentField = state.fieldHierarchy.peek().remove(key);
-                }
-
-                state.currentField = currentField;
-                Type fieldType;
-                if (currentField == null) {
-                    fieldType = state.restType.peek();
-                } else {
-                    // Replace modified field name with actual field name.
-                    key = currentField.getFieldName();
-                    fieldType = currentField.getFieldType();
-                    state.visitedFieldHierarchy.peek().put(key, currentField);
-                }
-                state.expectedTypes.push(fieldType);
-            } else if (state.expectedTypes.peek() == null) {
-                state.currentField = null;
-                state.expectedTypes.push(null);
-            }
-            state.fieldNames.push(key);
+            Values.handleFieldName(key, state);
 
             // Compose the value
             event = parse(state.parserState, EXPECT_MAP_VALUE);
@@ -512,7 +507,7 @@ public class YamlParser {
                 if (value instanceof String scalarValue) {
                     Type expType = state.expectedTypes.pop();
                     if (expType == null && state.currentField == null) {
-                        state.fieldNames.pop();
+                        state.fieldNameHierarchy.peek().pop();
                     } else if (expType == null) {
                         break;
                     } else if (state.jsonFieldDepth > 0 || state.currentField != null) {
@@ -536,7 +531,7 @@ public class YamlParser {
             event = parse(state.parserState, EXPECT_MAP_KEY);
         }
 
-        state.finalizeNonArrayObjectAndRemoveExpectedType();
+        state.checkUnionAndFinalizeNonArrayObject();
         if (!isParentSequence) {
             state.expectedTypes.pop();
         }

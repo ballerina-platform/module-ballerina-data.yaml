@@ -5,6 +5,7 @@ import io.ballerina.runtime.api.TypeTags;
 import io.ballerina.runtime.api.creators.TypeCreator;
 import io.ballerina.runtime.api.creators.ValueCreator;
 import io.ballerina.runtime.api.types.ArrayType;
+import io.ballerina.runtime.api.types.Field;
 import io.ballerina.runtime.api.types.FiniteType;
 import io.ballerina.runtime.api.types.IntersectionType;
 import io.ballerina.runtime.api.types.MapType;
@@ -29,6 +30,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Stack;
+
+import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.getAllFieldsInRecord;
 
 public class Values {
     private static final List<Integer> TYPE_PRIORITY_ORDER = List.of(
@@ -65,29 +69,91 @@ public class Values {
     public static final Integer UNSIGNED16_MAX_VALUE = 65535;
     public static final Integer UNSIGNED8_MAX_VALUE = 255;
 
-    static BMap<BString, Object> initRootMapValue(Type expectedType) {
-        return switch (expectedType.getTag()) {
-            case TypeTags.RECORD_TYPE_TAG ->
-                    ValueCreator.createRecordValue(expectedType.getPackage(), expectedType.getName());
-            case TypeTags.MAP_TAG -> ValueCreator.createMapValue((MapType) expectedType);
-            case TypeTags.JSON_TAG -> ValueCreator.createMapValue(JSON_MAP_TYPE);
-            case TypeTags.ANYDATA_TAG -> ValueCreator.createMapValue(ANYDATA_MAP_TYPE);
+    static BMap<BString, Object> initRootMapValue(YamlParser.ComposerState state) {
+        Type expectedType = state.expectedTypes.peek();
+        state.parserContexts.push(YamlParser.ParserContext.MAP);
+        switch (expectedType.getTag()) {
+            case TypeTags.RECORD_TYPE_TAG -> {
+                return ValueCreator.createRecordValue(expectedType.getPackage(), expectedType.getName());
+            }
+            case TypeTags.MAP_TAG -> {
+                return ValueCreator.createMapValue((MapType) expectedType);
+            }
+            case TypeTags.JSON_TAG -> {
+                return ValueCreator.createMapValue(JSON_MAP_TYPE);
+            }
+            case TypeTags.ANYDATA_TAG -> {
+                return ValueCreator.createMapValue(ANYDATA_MAP_TYPE);
+            }
+            case TypeTags.UNION_TAG -> {
+                state.parserContexts.push(YamlParser.ParserContext.MAP);
+                state.unionDepth++;
+                state.fieldNameHierarchy.push(new Stack<>());
+                return ValueCreator.createMapValue(JSON_MAP_TYPE);
+            }
             default -> throw DiagnosticLog.error(DiagnosticErrorCode.INVALID_TYPE, expectedType, "map type");
-        };
+        }
     }
 
-    static BArray initArrayValue(Type expectedType) {
-        return switch (expectedType.getTag()) {
-            case TypeTags.TUPLE_TAG -> ValueCreator.createTupleValue((TupleType) expectedType);
-            case TypeTags.ARRAY_TAG -> ValueCreator.createArrayValue((ArrayType) expectedType);
-            case TypeTags.JSON_TAG -> ValueCreator.createArrayValue(PredefinedTypes.TYPE_JSON_ARRAY);
-            case TypeTags.ANYDATA_TAG -> ValueCreator.createArrayValue(PredefinedTypes.TYPE_ANYDATA_ARRAY);
+    static Object initRootArrayValue(YamlParser.ComposerState state) {
+        state.parserContexts.push(YamlParser.ParserContext.ARRAY);
+        Type expType = state.expectedTypes.peek();
+        // In this point we know rhs is json[] or anydata[] hence init index counter.
+        if (expType.getTag() == TypeTags.JSON_TAG || expType.getTag() == TypeTags.ANYDATA_TAG) {
+            state.arrayIndexes.push(0);
+        }
+        return initArrayValue(state, expType);
+    }
+
+    static BArray initArrayValue(YamlParser.ComposerState state, Type expectedType) {
+        switch (expectedType.getTag()) {
+            case TypeTags.TUPLE_TAG -> {
+                return ValueCreator.createTupleValue((TupleType) expectedType);
+            }
+            case TypeTags.ARRAY_TAG -> {
+                return ValueCreator.createArrayValue((ArrayType) expectedType);
+            }
+            case TypeTags.JSON_TAG -> {
+                return ValueCreator.createArrayValue(PredefinedTypes.TYPE_JSON_ARRAY);
+            }
+            case TypeTags.ANYDATA_TAG -> {
+                return ValueCreator.createArrayValue(PredefinedTypes.TYPE_ANYDATA_ARRAY);
+            }
+            case TypeTags.UNION_TAG -> {
+                state.unionDepth++;
+                return ValueCreator.createArrayValue(PredefinedTypes.TYPE_JSON_ARRAY);
+            }
             default -> throw DiagnosticLog.error(DiagnosticErrorCode.INVALID_TYPE, expectedType, "list type");
-        };
+        }
+    }
+
+    static void handleFieldName(String jsonFieldName, YamlParser.ComposerState state) {
+        if (state.jsonFieldDepth == 0 && state.unionDepth == 0) {
+            Field currentField = state.visitedFieldHierarchy.peek().get(jsonFieldName);
+            if (currentField == null) {
+                currentField = state.fieldHierarchy.peek().remove(jsonFieldName);
+            }
+            state.currentField = currentField;
+
+            Type fieldType;
+            if (currentField == null) {
+                fieldType = state.restType.peek();
+            } else {
+                // Replace modified field name with actual field name.
+                jsonFieldName = currentField.getFieldName();
+                fieldType = currentField.getFieldType();
+                state.visitedFieldHierarchy.peek().put(jsonFieldName, currentField);
+            }
+            state.expectedTypes.push(fieldType);
+        } else if (state.expectedTypes.peek() == null) {
+            state.currentField = null;
+            state.expectedTypes.push(null);
+        }
+        state.fieldNameHierarchy.peek().push(jsonFieldName);
     }
 
     static Object convertAndUpdateCurrentValueNode(YamlParser.ComposerState sm, BString value, Type type) {
-        Object currentJson = sm.currentYamlNode;
+        Object currentYaml = sm.currentYamlNode;
         Object convertedValue = convertToExpectedType(value, type);
         if (convertedValue instanceof BError) {
             if (sm.currentField != null) {
@@ -97,26 +163,26 @@ public class Values {
             throw DiagnosticLog.error(DiagnosticErrorCode.INCOMPATIBLE_TYPE, type, value);
         }
 
-        Type currentJsonNodeType = TypeUtils.getType(currentJson);
+        Type currentJsonNodeType = TypeUtils.getType(currentYaml);
         switch (currentJsonNodeType.getTag()) {
             case TypeTags.MAP_TAG, TypeTags.RECORD_TYPE_TAG -> {
-                ((BMap<BString, Object>) currentJson).put(StringUtils.fromString(sm.fieldNames.pop()),
+                ((BMap<BString, Object>) currentYaml).put(StringUtils.fromString(sm.fieldNameHierarchy.peek().pop()),
                         convertedValue);
-                return currentJson;
+                return currentYaml;
             }
             case TypeTags.ARRAY_TAG -> {
                 // Handle projection in array.
                 ArrayType arrayType = (ArrayType) currentJsonNodeType;
                 if (arrayType.getState() == ArrayType.ArrayState.CLOSED &&
                         arrayType.getSize() <= sm.arrayIndexes.peek()) {
-                    return currentJson;
+                    return currentYaml;
                 }
-                ((BArray) currentJson).add(sm.arrayIndexes.peek(), convertedValue);
-                return currentJson;
+                ((BArray) currentYaml).add(sm.arrayIndexes.peek(), convertedValue);
+                return currentYaml;
             }
             case TypeTags.TUPLE_TAG -> {
-                ((BArray) currentJson).add(sm.arrayIndexes.peek(), convertedValue);
-                return currentJson;
+                ((BArray) currentYaml).add(sm.arrayIndexes.peek(), convertedValue);
+                return currentYaml;
             }
             default -> {
                 return convertedValue;
@@ -125,11 +191,10 @@ public class Values {
     }
 
     private static String getCurrentFieldPath(YamlParser.ComposerState sm) {
-        Iterator<String> itr = sm.fieldNames.descendingIterator();
-
-        StringBuilder result = new StringBuilder(itr.hasNext() ? itr.next() : "");
+        Iterator<Stack<String>> itr = sm.fieldNameHierarchy.iterator();
+        StringBuilder result = new StringBuilder(itr.hasNext() ? itr.next().peek() : "");
         while (itr.hasNext()) {
-            result.append(".").append(itr.next());
+            result.append(".").append(itr.next().peek());
         }
         return result.toString();
     }
@@ -142,48 +207,56 @@ public class Values {
     }
 
     private static Optional<BMap<BString, Object>> initNewMapValue(YamlParser.ComposerState state, Type expType) {
+        YamlParser.ParserContext parentContext = state.parserContexts.peek();
+        state.parserContexts.push(YamlParser.ParserContext.MAP);
         if (expType == null) {
+            state.fieldNameHierarchy.push(new Stack<>());
             return Optional.empty();
         }
-        Type currentType = TypeUtils.getReferredType(expType);
-
         if (state.currentYamlNode != null) {
             state.nodesStack.push(state.currentYamlNode);
         }
+        BMap<BString, Object> nextMapValue = checkTypeAndCreateMappingValue(state, expType, parentContext);
+        return Optional.of(nextMapValue);
+    }
 
-        if (currentType.getTag() == TypeTags.UNION_TAG) {
-            currentType = findMappingTypeFromUnionType((UnionType) currentType);
-        }
-
+    static BMap<BString, Object> checkTypeAndCreateMappingValue(YamlParser.ComposerState state, Type expType,
+                                                                YamlParser.ParserContext parentContext) {
+        Type currentType = TypeUtils.getReferredType(expType);
         BMap<BString, Object> nextMapValue;
         switch (currentType.getTag()) {
             case TypeTags.RECORD_TYPE_TAG -> {
                 RecordType recordType = (RecordType) currentType;
                 nextMapValue = ValueCreator.createRecordValue(expType.getPackage(), expType.getName());
-                state.updateExpectedType(recordType.getFields(), recordType.getRestFieldType());
+                state.updateFieldHierarchiesAndRestType(getAllFieldsInRecord(recordType),
+                        recordType.getRestFieldType());
             }
             case TypeTags.MAP_TAG -> {
                 nextMapValue = ValueCreator.createMapValue((MapType) currentType);
-                state.updateExpectedType(new HashMap<>(), ((MapType) currentType).getConstrainedType());
+                state.updateFieldHierarchiesAndRestType(new HashMap<>(), ((MapType) currentType).getConstrainedType());
             }
             case TypeTags.JSON_TAG -> {
                 nextMapValue = ValueCreator.createMapValue(JSON_MAP_TYPE);
-                state.updateExpectedType(new HashMap<>(), PredefinedTypes.TYPE_JSON);
+                state.updateFieldHierarchiesAndRestType(new HashMap<>(), currentType);
             }
             case TypeTags.ANYDATA_TAG -> {
                 nextMapValue = ValueCreator.createMapValue(ANYDATA_MAP_TYPE);
-                state.updateExpectedType(new HashMap<>(), PredefinedTypes.TYPE_JSON);
+                state.updateFieldHierarchiesAndRestType(new HashMap<>(), currentType);
             }
-            default -> throw DiagnosticLog.error(DiagnosticErrorCode.INVALID_TYPE_FOR_FIELD,
-                    getCurrentFieldPath(state));
+            case TypeTags.UNION_TAG -> {
+                nextMapValue = ValueCreator.createMapValue(JSON_MAP_TYPE);
+                state.parserContexts.push(YamlParser.ParserContext.MAP);
+                state.unionDepth++;
+                state.fieldNameHierarchy.push(new Stack<>());
+            }
+            default -> {
+                if (parentContext == YamlParser.ParserContext.ARRAY) {
+                    throw DiagnosticLog.error(DiagnosticErrorCode.INVALID_TYPE, currentType, "map type");
+                }
+                throw DiagnosticLog.error(DiagnosticErrorCode.INVALID_TYPE_FOR_FIELD, getCurrentFieldPath(state));
+            }
         }
-
-        Object currentJson = state.currentYamlNode;
-        int valueTypeTag = TypeUtils.getType(currentJson).getTag();
-        if (valueTypeTag == TypeTags.MAP_TAG || valueTypeTag == TypeTags.RECORD_TYPE_TAG) {
-            ((BMap<BString, Object>) currentJson).put(StringUtils.fromString(state.fieldNames.pop()), nextMapValue);
-        }
-        return Optional.of(nextMapValue);
+        return nextMapValue;
     }
 
     static Type getMemberType(Type expectedType, int index) {
@@ -393,6 +466,24 @@ public class Values {
         return null;
     }
 
+    static void updateExpectedType(YamlParser.ComposerState state) {
+        if (state.unionDepth > 0) {
+            return;
+        }
+        state.expectedTypes.push(getMemberType(state.expectedTypes.peek(),
+                state.arrayIndexes.peek()));
+    }
+
+    static void updateNextMapValueBasedOnExpType(YamlParser.ComposerState state) {
+//        updateExpectedType(state);
+        updateNextMapValue(state);
+    }
+
+    static void updateNextArrayValueBasedOnExpType(YamlParser.ComposerState state) {
+//        updateExpectedType(state);
+        updateNextArrayValue(state);
+    }
+
     static void updateNextArrayValue(YamlParser.ComposerState state) {
         state.arrayIndexes.push(0);
         Optional<BArray> nextArray = initNewArrayValue(state);
@@ -400,12 +491,14 @@ public class Values {
     }
 
     static Optional<BArray> initNewArrayValue(YamlParser.ComposerState state) {
+        state.parserContexts.push(YamlParser.ParserContext.ARRAY);
         if (state.expectedTypes.peek() == null) {
             return Optional.empty();
         }
 
         Object currentYamlNode = state.currentYamlNode;
-        BArray nextArrValue = initArrayValue(state.expectedTypes.peek());
+        Type expType = TypeUtils.getReferredType(state.expectedTypes.peek());
+        BArray nextArrValue = initArrayValue(state, expType);
         if (currentYamlNode == null) {
             return Optional.ofNullable(nextArrValue);
         }
