@@ -1,14 +1,14 @@
-package io.ballerina.stdlib.data.yaml.parser;
+package io.ballerina.stdlib.data.yaml.common;
 
 import io.ballerina.stdlib.data.yaml.common.Types.Collection;
 
-public abstract class ParserEvent {
+public abstract class YamlEvent {
 
     private EventKind kind;
     private String anchor = null;
     private String tag = null;
 
-    public ParserEvent(EventKind kind) {
+    public YamlEvent(EventKind kind) {
         this.kind = kind;
     }
 
@@ -16,7 +16,7 @@ public abstract class ParserEvent {
         return kind;
     }
 
-    public abstract ParserEvent clone();
+    public abstract YamlEvent clone();
 
     public void setKind(EventKind kind) {
         this.kind = kind;
@@ -38,7 +38,7 @@ public abstract class ParserEvent {
         this.tag = tag;
     }
 
-    public static class AliasEvent extends ParserEvent {
+    public static class AliasEvent extends YamlEvent {
 
         private final String alias;
 
@@ -52,7 +52,7 @@ public abstract class ParserEvent {
         }
 
         @Override
-        public ParserEvent clone() {
+        public YamlEvent clone() {
             AliasEvent aliasEvent = new AliasEvent(alias);
             aliasEvent.setAnchor(getAnchor());
             aliasEvent.setTag(getTag());
@@ -60,7 +60,7 @@ public abstract class ParserEvent {
         }
     }
 
-    public static class ScalarEvent extends ParserEvent {
+    public static class ScalarEvent extends YamlEvent {
 
         private final String value;
 
@@ -79,7 +79,7 @@ public abstract class ParserEvent {
         }
 
         @Override
-        public ParserEvent clone() {
+        public YamlEvent clone() {
             ScalarEvent scalarEvent = new ScalarEvent(value);
             scalarEvent.setAnchor(getAnchor());
             scalarEvent.setTag(getTag());
@@ -87,7 +87,7 @@ public abstract class ParserEvent {
         }
     }
 
-    public static class StartEvent extends ParserEvent {
+    public static class StartEvent extends YamlEvent {
 
         private final Collection startType;
         private boolean flowStyle = false;
@@ -118,7 +118,7 @@ public abstract class ParserEvent {
         }
 
         @Override
-        public ParserEvent clone() {
+        public YamlEvent clone() {
             StartEvent startEvent = new StartEvent(startType, flowStyle, implicit);
             startEvent.setAnchor(getAnchor());
             startEvent.setTag(getTag());
@@ -126,7 +126,7 @@ public abstract class ParserEvent {
         }
     }
 
-    public static class EndEvent extends ParserEvent {
+    public static class EndEvent extends YamlEvent {
 
         private final Collection endType;
 
@@ -140,7 +140,7 @@ public abstract class ParserEvent {
         }
 
         @Override
-        public ParserEvent clone() {
+        public YamlEvent clone() {
             EndEvent endEvent = new EndEvent(endType);
             endEvent.setAnchor(getAnchor());
             endEvent.setTag(getTag());
@@ -148,7 +148,7 @@ public abstract class ParserEvent {
         }
     }
 
-    public static class DocumentMarkerEvent extends ParserEvent {
+    public static class DocumentMarkerEvent extends YamlEvent {
 
         private final boolean explicit;
 
@@ -162,7 +162,7 @@ public abstract class ParserEvent {
         }
 
         @Override
-        public ParserEvent clone() {
+        public YamlEvent clone() {
             DocumentMarkerEvent documentMarkerEvent = new DocumentMarkerEvent(explicit);
             documentMarkerEvent.setAnchor(getAnchor());
             documentMarkerEvent.setTag(getTag());

@@ -45,7 +45,20 @@ public isolated function parseBytes(byte[] s,
 public isolated function parseStream(stream<byte[], error?> s,
         Options options = {}, typedesc<anydata> t = <>)
         returns t|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
-        
+
+# Converts anydata YAML value to a string.
+#
+# + yamlValue - Input yaml value
+# + config - Options used to get desired toString representation
+# + return - On success, returns to string value, else returns an `yaml:Error`
+public isolated function toYamlString(anydata yamlValue, WriteConfig config) returns string|Error {
+    string[] lines = check toYamlStringArray(yamlValue, config);
+    return "\n".'join(...lines);
+}
+
+isolated function toYamlStringArray(anydata yamlValue, WriteConfig config)
+    returns string[]|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native" } external;
+
 # Represents the YAML schema available for the parser.
 #
 # + FAILSAFE_SCHEMA - Generic schema that works for any YAML document
@@ -67,6 +80,26 @@ public type Options record {
     boolean allowAnchorRedefinition = true;
     boolean allowMapEntryRedefinition = false;
 };
+
+# Configurations for writing a YAML document.
+#
+# + indentationPolicy - Number of whitespace for an indentation
+# + blockLevel - The maximum depth level for a block collection
+# + canonical - If set, the tags are written along with the nodes
+# + useSingleQuotes - If set, single quotes are used to surround scalars
+# + forceQuotes - If set, all the scalars are surrounded by quotes
+# + schema - YAML schema used for writing
+# + isStream - If set, the parser will write a stream of YAML documents
+public type WriteConfig record {|
+    int indentationPolicy = 2;
+    int blockLevel = 1;
+    boolean canonical = false;
+    boolean useSingleQuotes = false;
+    boolean forceQuotes = false;
+    YAMLSchema schema = CORE_SCHEMA;
+    boolean isStream = false;
+    boolean flowStyle = false;
+|};
 
 # Represents the error type of the ballerina/data.yaml module. This error type represents any error that can occur
 # during the execution of data.yaml APIs.

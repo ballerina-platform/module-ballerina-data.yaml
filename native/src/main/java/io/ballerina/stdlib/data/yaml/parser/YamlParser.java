@@ -16,6 +16,7 @@ import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.stdlib.data.yaml.common.Types;
 import io.ballerina.stdlib.data.yaml.common.Types.Collection;
+import io.ballerina.stdlib.data.yaml.common.YamlEvent;
 import io.ballerina.stdlib.data.yaml.lexer.Indentation;
 import io.ballerina.stdlib.data.yaml.lexer.LexerState;
 import io.ballerina.stdlib.data.yaml.lexer.Token;
@@ -34,6 +35,8 @@ import java.util.Map;
 import java.util.Stack;
 
 import static io.ballerina.stdlib.data.yaml.common.Types.Collection.SEQUENCE;
+import static io.ballerina.stdlib.data.yaml.common.Types.DEFAULT_GLOBAL_TAG_HANDLE;
+import static io.ballerina.stdlib.data.yaml.common.Types.DEFAULT_LOCAL_TAG_HANDLE;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.ANCHOR;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.COMMENT;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DIRECTIVE;
@@ -68,8 +71,6 @@ import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.possibleYamlStrea
 
 public class YamlParser {
 
-    public static final String DEFAULT_LOCAL_TAG_HANDLE = "!";
-    public static final String DEFAULT_GLOBAL_TAG_HANDLE = "tag:yaml.org,2002:";
     public static final Map<String, String> DEFAULT_TAG_HANDLES = Map.of("!", DEFAULT_LOCAL_TAG_HANDLE,
             "!!", DEFAULT_GLOBAL_TAG_HANDLE);
 
@@ -248,11 +249,11 @@ public class YamlParser {
 
     private static Object parseDocument(ComposerState state) {
 
-        ParserEvent event = parse(state.parserState);
+        YamlEvent event = parse(state.parserState);
 
         // Ignore the start document marker for explicit documents
-        if (event.getKind() == ParserEvent.EventKind.DOCUMENT_MARKER_EVENT &&
-                ((ParserEvent.DocumentMarkerEvent) event).isExplicit()) {
+        if (event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT &&
+                ((YamlEvent.DocumentMarkerEvent) event).isExplicit()) {
             event = parse(state.parserState, ANY_DOCUMENT);
         }
 
@@ -271,12 +272,12 @@ public class YamlParser {
         return output;
     }
 
-    private static Object handleEvent(ComposerState state, ParserEvent event, boolean mapOrSequenceScalar) {
+    private static Object handleEvent(ComposerState state, YamlEvent event, boolean mapOrSequenceScalar) {
         // Check for aliases
-        ParserEvent.EventKind eventKind = event.getKind();
+        YamlEvent.EventKind eventKind = event.getKind();
 
-        if (eventKind == ParserEvent.EventKind.ALIAS_EVENT) {
-            ParserEvent.AliasEvent aliasEvent = (ParserEvent.AliasEvent) event;
+        if (eventKind == YamlEvent.EventKind.ALIAS_EVENT) {
+            YamlEvent.AliasEvent aliasEvent = (YamlEvent.AliasEvent) event;
             String alias = state.anchorBuffer.get(aliasEvent.getAlias());
             if (alias == null) {
                 throw new RuntimeException("The anchor does not exist");
@@ -285,20 +286,20 @@ public class YamlParser {
         }
 
         // Ignore end events
-        if (eventKind == ParserEvent.EventKind.END_EVENT) {
+        if (eventKind == YamlEvent.EventKind.END_EVENT) {
             return null;
         }
 
         // Ignore document markers
-        if (eventKind == ParserEvent.EventKind.DOCUMENT_MARKER_EVENT) {
+        if (eventKind == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
             state.documentTerminated = true;
             return null;
         }
 
         Object output = null;
         // Check for collections
-        if (eventKind == ParserEvent.EventKind.START_EVENT) {
-            ParserEvent.StartEvent startEvent = (ParserEvent.StartEvent) event;
+        if (eventKind == YamlEvent.EventKind.START_EVENT) {
+            YamlEvent.StartEvent startEvent = (YamlEvent.StartEvent) event;
 
             switch (startEvent.getStartType()) {
                 case SEQUENCE -> {
@@ -317,7 +318,7 @@ public class YamlParser {
             return state.currentYamlNode;
         }
 
-        ParserEvent.ScalarEvent scalarEvent = (ParserEvent.ScalarEvent) event;
+        YamlEvent.ScalarEvent scalarEvent = (YamlEvent.ScalarEvent) event;
 
         // Check for scalar
         output =  castData(state, scalarEvent.getValue(), Types.FailSafeSchema.STRING, event.getTag());
@@ -353,12 +354,12 @@ public class YamlParser {
         }
 
         List<Object> sequence = new ArrayList<>();
-        ParserEvent event = parse(state.parserState, EXPECT_SEQUENCE_VALUE);
+        YamlEvent event = parse(state.parserState, EXPECT_SEQUENCE_VALUE);
 
         // Iterate until the end sequence event is detected
         boolean terminated = false;
         while (!terminated) {
-            if (event.getKind() == ParserEvent.EventKind.DOCUMENT_MARKER_EVENT) {
+            if (event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
                 state.documentTerminated = true;
                 if (!flowStyle) {
                     break;
@@ -366,8 +367,8 @@ public class YamlParser {
                 throw new RuntimeException("Unexpected event");
             }
 
-            if (event.getKind() == ParserEvent.EventKind.END_EVENT) {
-                ParserEvent.EndEvent endEvent = (ParserEvent.EndEvent) event;
+            if (event.getKind() == YamlEvent.EventKind.END_EVENT) {
+                YamlEvent.EndEvent endEvent = (YamlEvent.EndEvent) event;
 
                 switch (endEvent.getEndType()) {
                     case MAPPING -> throw new RuntimeException("Unexpected event");
@@ -414,12 +415,12 @@ public class YamlParser {
             Values.updateNextMapValue(state);
         }
         Map<String, Object> structure = new HashMap<>();
-        ParserEvent event = parse(state.parserState, EXPECT_MAP_KEY);
+        YamlEvent event = parse(state.parserState, EXPECT_MAP_KEY);
 
         // Iterate until an end event is detected
         boolean terminated = false;
         while (!terminated) {
-            if (event.getKind() == ParserEvent.EventKind.DOCUMENT_MARKER_EVENT) {
+            if (event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
                 state.documentTerminated = true;
                 if (!flowStyle) {
                     break;
@@ -427,8 +428,8 @@ public class YamlParser {
                 throw new RuntimeException("Unexpected event");
             }
 
-            if (event.getKind() == ParserEvent.EventKind.END_EVENT) {
-                ParserEvent.EndEvent endEvent = (ParserEvent.EndEvent) event;
+            if (event.getKind() == YamlEvent.EventKind.END_EVENT) {
+                YamlEvent.EndEvent endEvent = (YamlEvent.EndEvent) event;
                 switch (endEvent.getEndType()) {
                     case MAPPING -> terminated = true;
                     case SEQUENCE -> throw new RuntimeException("Unexpected event");
@@ -446,8 +447,8 @@ public class YamlParser {
             }
 
             // Cannot have a nested block mapping if a value is assigned
-            if (event.getKind() == ParserEvent.EventKind.START_EVENT
-                    && !((ParserEvent.StartEvent) event).isFlowStyle()) {
+            if (event.getKind() == YamlEvent.EventKind.START_EVENT
+                    && !((YamlEvent.StartEvent) event).isFlowStyle()) {
                 throw new RuntimeException("Cannot have nested mapping under a key-pair that is already assigned");
             }
 
@@ -487,8 +488,8 @@ public class YamlParser {
             event = parse(state.parserState, EXPECT_MAP_VALUE);
 
             // Check for mapping end events
-            if (event.getKind() == ParserEvent.EventKind.END_EVENT) {
-                ParserEvent.EndEvent endEvent = (ParserEvent.EndEvent) event;
+            if (event.getKind() == YamlEvent.EventKind.END_EVENT) {
+                YamlEvent.EndEvent endEvent = (YamlEvent.EndEvent) event;
                 switch (endEvent.getEndType()) {
                     case MAPPING -> {
                         structure.put(key, null);
@@ -551,7 +552,7 @@ public class YamlParser {
      * @param event - The event representing the alias name
      * @param assignedValue - Anchored value to the alias
      */
-    public static void checkAnchor(ComposerState state, ParserEvent event, String assignedValue) {
+    public static void checkAnchor(ComposerState state, YamlEvent event, String assignedValue) {
         if (event.getAnchor() != null) {
             if (state.anchorBuffer.containsKey(event.getAnchor()) && !state.allowAnchorRedefinition) {
                 throw new RuntimeException("Duplicate anchor definition");
@@ -599,7 +600,7 @@ public class YamlParser {
      * @param state - Current parser state
      * @return - Parsed event
      */
-    private static ParserEvent parse(ParserState state) {
+    private static YamlEvent parse(ParserState state) {
         return parse(state, ParserUtils.ParserOption.DEFAULT, BARE_DOCUMENT);
     }
 
@@ -610,7 +611,7 @@ public class YamlParser {
      * @param docType - Document type to be parsed
      * @return - Parsed event
      */
-    private static ParserEvent parse(ParserState state, ParserUtils.DocumentType docType) {
+    private static YamlEvent parse(ParserState state, ParserUtils.DocumentType docType) {
         return parse(state, ParserUtils.ParserOption.DEFAULT, docType);
     }
 
@@ -621,7 +622,7 @@ public class YamlParser {
      * @param option - Expected values inside a mapping collection
      * @return - Parsed event
      */
-    private static ParserEvent parse(ParserState state, ParserUtils.ParserOption option) {
+    private static YamlEvent parse(ParserState state, ParserUtils.ParserOption option) {
         return parse(state, option, BARE_DOCUMENT);
     }
 
@@ -633,10 +634,10 @@ public class YamlParser {
      * @param docType - Document type to be parsed
      * @return - Parsed event
      */
-    private static ParserEvent parse(ParserState state, ParserUtils.ParserOption option,
-                                     ParserUtils.DocumentType docType) {
+    private static YamlEvent parse(ParserState state, ParserUtils.ParserOption option,
+                                   ParserUtils.DocumentType docType) {
         // Empty the event buffer before getting new tokens
-        final List<ParserEvent> eventBuffer = state.getEventBuffer();
+        final List<YamlEvent> eventBuffer = state.getEventBuffer();
 
         if (!eventBuffer.isEmpty()) {
             return eventBuffer.remove(0);
@@ -659,7 +660,7 @@ public class YamlParser {
                 if (docType == DIRECTIVE_DOCUMENT) {
                     throw new RuntimeException("Invalid document");
                 }
-                return new ParserEvent.EndEvent(Collection.STREAM);
+                return new YamlEvent.EndEvent(Collection.STREAM);
             }
             try {
                 state.initLexer();
@@ -726,7 +727,7 @@ public class YamlParser {
                                 "in the same line as the directive marker");
                     }
                 }
-                return new ParserEvent.DocumentMarkerEvent(explicit);
+                return new YamlEvent.DocumentMarkerEvent(explicit);
             }
             case DOUBLE_QUOTE_DELIMITER, SINGLE_QUOTE_DELIMITER, PLANAR_CHAR, ALIAS -> {
                 return appendData(state, option, true);
@@ -737,28 +738,28 @@ public class YamlParser {
             case MAPPING_VALUE -> { // Empty node as the key
                 if (state.getLexerState().isFlowCollection()) {
                     if (option == EXPECT_SEQUENCE_ENTRY || option == EXPECT_SEQUENCE_VALUE) {
-                        state.getEventBuffer().add(new ParserEvent.ScalarEvent());
-                        return new ParserEvent.StartEvent(Collection.MAPPING, false, true);
+                        state.getEventBuffer().add(new YamlEvent.ScalarEvent());
+                        return new YamlEvent.StartEvent(Collection.MAPPING, false, true);
                     }
-                    return new ParserEvent.ScalarEvent();
+                    return new YamlEvent.ScalarEvent();
                 } else {
                     Indentation indentation = state.getCurrentToken().getIndentation();
                     separate(state);
                     switch (indentation.getChange()) {
                         case INDENT_INCREASE -> { // Increase in indent
-                            state.getEventBuffer().add(new ParserEvent.ScalarEvent());
-                            return new ParserEvent.StartEvent(Collection.MAPPING);
+                            state.getEventBuffer().add(new YamlEvent.ScalarEvent());
+                            return new YamlEvent.StartEvent(Collection.MAPPING);
                         }
                         case INDENT_NO_CHANGE -> { // Same indent
-                            return new ParserEvent.ScalarEvent();
+                            return new YamlEvent.ScalarEvent();
                         }
                         case INDENT_DECREASE -> { // Decrease in indent
 
                             for (Collection collection: indentation.getCollection()) {
-                                state.getEventBuffer().add(new ParserEvent.EndEvent(collection));
+                                state.getEventBuffer().add(new YamlEvent.EndEvent(collection));
                             }
                             if (option == EXPECT_MAP_VALUE) {
-                                state.getEventBuffer().add(new ParserEvent.ScalarEvent());
+                                state.getEventBuffer().add(new YamlEvent.ScalarEvent());
                             }
                             return state.getEventBuffer().remove(0);
                         }
@@ -767,7 +768,7 @@ public class YamlParser {
             }
             case SEPARATOR -> { // Empty node as the value in flow mappings
                 if (option == EXPECT_MAP_VALUE) { // Check for empty values in flow mappings
-                    return new ParserEvent.ScalarEvent();
+                    return new YamlEvent.ScalarEvent();
                 }
             }
             case MAPPING_KEY -> { // Explicit key
@@ -785,29 +786,29 @@ public class YamlParser {
 
                 switch (state.getCurrentToken().getIndentation().getChange()) {
                     case INDENT_INCREASE -> { // Increase in indent
-                       return new ParserEvent.StartEvent(SEQUENCE);
+                       return new YamlEvent.StartEvent(SEQUENCE);
                     }
                     case INDENT_NO_CHANGE -> { // Same indent
-                        ParserEvent event = parse(state, EXPECT_SEQUENCE_VALUE, docType);
+                        YamlEvent event = parse(state, EXPECT_SEQUENCE_VALUE, docType);
                         if (option == EXPECT_SEQUENCE_VALUE) {
                             state.getEventBuffer().add(event);
-                            return new ParserEvent.ScalarEvent();
+                            return new YamlEvent.ScalarEvent();
                         }
                         return event;
                     }
                     case INDENT_DECREASE -> { // Decrease in indent
                         for (Collection collection: state.getCurrentToken().getIndentation().getCollection()) {
-                            state.getEventBuffer().add(new ParserEvent.EndEvent(collection));
+                            state.getEventBuffer().add(new YamlEvent.EndEvent(collection));
                         }
                         return state.getEventBuffer().remove(0);
                     }
                 }
             }
             case MAPPING_START -> {
-                return new ParserEvent.StartEvent(Collection.MAPPING, true, false);
+                return new YamlEvent.StartEvent(Collection.MAPPING, true, false);
             }
             case SEQUENCE_START -> {
-                return new ParserEvent.StartEvent(SEQUENCE, true, false);
+                return new YamlEvent.StartEvent(SEQUENCE, true, false);
             }
             case SEQUENCE_END -> {
                 if (state.getLexerState().isFlowCollection()) {
@@ -819,12 +820,12 @@ public class YamlParser {
                         throw new RuntimeException("Unexpected token error");
                     }
                 }
-                return new ParserEvent.EndEvent(SEQUENCE);
+                return new YamlEvent.EndEvent(SEQUENCE);
             }
             case MAPPING_END -> {
                 if (option == EXPECT_MAP_VALUE) {
-                    state.getEventBuffer().add(new ParserEvent.EndEvent(Collection.MAPPING));
-                    return new ParserEvent.ScalarEvent();
+                    state.getEventBuffer().add(new YamlEvent.EndEvent(Collection.MAPPING));
+                    return new YamlEvent.ScalarEvent();
                 }
                 if (state.getLexerState().isFlowCollection()) {
                     separate(state);
@@ -835,7 +836,7 @@ public class YamlParser {
                         throw new RuntimeException("Unexpected token error");
                     }
                 }
-                return new ParserEvent.EndEvent(Collection.MAPPING);
+                return new YamlEvent.EndEvent(Collection.MAPPING);
             }
             case LITERAL, FOLDED -> {
                 state.updateLexerState(LexerState.LEXER_LITERAL);
@@ -905,12 +906,12 @@ public class YamlParser {
         }
     }
 
-    private static ParserEvent nodeComplete(ParserState state, ParserUtils.ParserOption option) {
+    private static YamlEvent nodeComplete(ParserState state, ParserUtils.ParserOption option) {
         return nodeComplete(state, option, new TagStructure());
     }
 
-    private static ParserEvent nodeComplete(ParserState state, ParserUtils.ParserOption option,
-                                            TagStructure definedProperties) {
+    private static YamlEvent nodeComplete(ParserState state, ParserUtils.ParserOption option,
+                                          TagStructure definedProperties) {
         TagStructure tagStructure = new TagStructure();
         state.setTagPropertiesInLine(true);
 
@@ -1025,11 +1026,11 @@ public class YamlParser {
      * @param option - Selected parser option
      * @return - The constructed scalar or start event
      */
-    private static ParserEvent appendData(ParserState state, ParserUtils.ParserOption option) {
+    private static YamlEvent appendData(ParserState state, ParserUtils.ParserOption option) {
         return appendData(state, option, false, new TagStructure(), null);
     }
 
-    private static ParserEvent appendData(ParserState state, ParserUtils.ParserOption option, boolean peeked) {
+    private static YamlEvent appendData(ParserState state, ParserUtils.ParserOption option, boolean peeked) {
         return appendData(state, option, peeked, new TagStructure(), null);
     }
 
@@ -1043,11 +1044,11 @@ public class YamlParser {
      * @param definedProperties - Tag properties defined by the previous node
      * @return - The constructed scalar or start event
      */
-    private static ParserEvent appendData(ParserState state, ParserUtils.ParserOption option, boolean peeked,
-                                          TagStructure tagStructure, TagStructure definedProperties) {
+    private static YamlEvent appendData(ParserState state, ParserUtils.ParserOption option, boolean peeked,
+                                        TagStructure tagStructure, TagStructure definedProperties) {
 
         state.setExpectBlockSequenceValue(true);
-        ParserEvent buffer = null;
+        YamlEvent buffer = null;
 
         // Check for nested explicit keys
         if (!peeked) {
@@ -1060,7 +1061,7 @@ public class YamlParser {
         boolean explicitKey = state.isExplicitKey();
 
         if (option == EXPECT_MAP_VALUE && state.getCurrentToken().getType() == MAPPING_KEY) {
-            buffer = new ParserEvent.ScalarEvent();
+            buffer = new YamlEvent.ScalarEvent();
         }
 
         Indentation indentation = null;
@@ -1076,8 +1077,8 @@ public class YamlParser {
             throw new RuntimeException("Cannot have a scalar next to a block key-value pair");
         }
 
-        ParserEvent event = content(state, peeked, state.isExplicitKey(), tagStructure);
-        boolean isAlias = event.getKind() == ParserEvent.EventKind.ALIAS_EVENT;
+        YamlEvent event = content(state, peeked, state.isExplicitKey(), tagStructure);
+        boolean isAlias = event.getKind() == YamlEvent.EventKind.ALIAS_EVENT;
 
         state.setExplicitKey(false);
         if (!explicitKey) {
@@ -1149,7 +1150,7 @@ public class YamlParser {
             }
             separate(state);
             if (option == EXPECT_MAP_KEY) {
-                state.getEventBuffer().add(new ParserEvent.ScalarEvent());
+                state.getEventBuffer().add(new YamlEvent.ScalarEvent());
             }
         } else if (state.getCurrentToken().getType() == MAPPING_VALUE) {
             // If there are no whitespace, and the current token is ':'
@@ -1173,12 +1174,12 @@ public class YamlParser {
             separate(state);
             if (state.isEmptyKey() && (option == EXPECT_MAP_VALUE || option == EXPECT_SEQUENCE_VALUE)) {
                 state.setEmptyKey(false);
-                state.getEventBuffer().add(new ParserEvent.ScalarEvent());
+                state.getEventBuffer().add(new YamlEvent.ScalarEvent());
             } else if (option == EXPECT_MAP_VALUE) {
-                    buffer = constructEvent(new ParserEvent.ScalarEvent(), newNodeTagStructure);
+                    buffer = constructEvent(new YamlEvent.ScalarEvent(), newNodeTagStructure);
             } else if (option == EXPECT_SEQUENCE_ENTRY || option == EXPECT_SEQUENCE_VALUE
                         && state.getLexerState().isFlowCollection()) {
-                    buffer = new ParserEvent.StartEvent(Collection.MAPPING, false, true);
+                    buffer = new YamlEvent.StartEvent(Collection.MAPPING, false, true);
             }
         } else {
             // There is already tag properties defined and the value is not a key
@@ -1210,21 +1211,21 @@ public class YamlParser {
             switch (indentation.getChange()) {
                 case INDENT_INCREASE -> { // Increased
                     // Block sequence
-                    if (event.getKind() == ParserEvent.EventKind.START_EVENT
-                            && ((ParserEvent.StartEvent) event).getStartType() == SEQUENCE) {
+                    if (event.getKind() == YamlEvent.EventKind.START_EVENT
+                            && ((YamlEvent.StartEvent) event).getStartType() == SEQUENCE) {
                         return constructEvent(
-                                new ParserEvent.StartEvent(indentation.getCollection().remove(collectionSize - 1)),
+                                new YamlEvent.StartEvent(indentation.getCollection().remove(collectionSize - 1)),
                                 tagStructure);
                     }
                     // Block mapping
                     buffer = constructEvent(
-                            new ParserEvent.StartEvent(indentation.getCollection().remove(collectionSize - 1)),
+                            new YamlEvent.StartEvent(indentation.getCollection().remove(collectionSize - 1)),
                             newNodeTagStructure);
                 }
                 case INDENT_DECREASE -> { // Decreased
-                    buffer = new ParserEvent.EndEvent(indentation.getCollection().remove(0));
+                    buffer = new YamlEvent.EndEvent(indentation.getCollection().remove(0));
                     for (Collection collection: indentation.getCollection()) {
-                        state.getEventBuffer().add(new ParserEvent.EndEvent(collection));
+                        state.getEventBuffer().add(new YamlEvent.EndEvent(collection));
                     }
                 }
             }
@@ -1248,8 +1249,8 @@ public class YamlParser {
         return buffer;
     }
 
-    private static ParserEvent constructEvent(ParserEvent parserEvent, TagStructure newNodeTagStructure) {
-        ParserEvent event = parserEvent.clone();
+    private static YamlEvent constructEvent(YamlEvent yamlEvent, TagStructure newNodeTagStructure) {
+        YamlEvent event = yamlEvent.clone();
         if (newNodeTagStructure != null) {
             event.setAnchor(newNodeTagStructure.anchor);
             event.setTag(newNodeTagStructure.tag);
@@ -1265,8 +1266,8 @@ public class YamlParser {
      * @param tagStructure - Tag structure of the current node
      * @return Parser Event
      */
-    private static ParserEvent content(ParserState state, boolean peeked, boolean explicitKey,
-                                       TagStructure tagStructure) {
+    private static YamlEvent content(ParserState state, boolean peeked, boolean explicitKey,
+                                     TagStructure tagStructure) {
         if (!peeked) {
             separate(state);
             getNextToken(state);
@@ -1278,21 +1279,21 @@ public class YamlParser {
                 state.getLexerState().setJsonKey(true);
                 String value = singleQuoteScalar(state);
                 checkEmptyKey(state);
-                return new ParserEvent.ScalarEvent(value);
+                return new YamlEvent.ScalarEvent(value);
             }
             case DOUBLE_QUOTE_DELIMITER -> {
                 state.getLexerState().setJsonKey(true);
                 String value = doubleQuoteScalar(state);
                 checkEmptyKey(state);
-                return new ParserEvent.ScalarEvent(value);
+                return new YamlEvent.ScalarEvent(value);
             }
             case PLANAR_CHAR -> {
                 String value = planarScalar(state);
                 checkEmptyKey(state);
-                return new ParserEvent.ScalarEvent(value);
+                return new YamlEvent.ScalarEvent(value);
             }
             case SEQUENCE_START -> {
-                return new ParserEvent.StartEvent(SEQUENCE);
+                return new YamlEvent.StartEvent(SEQUENCE);
             }
             case SEQUENCE_ENTRY -> {
                 if (state.isTagPropertiesInLine()) {
@@ -1301,22 +1302,22 @@ public class YamlParser {
 
                 switch (state.getCurrentToken().getIndentation().getChange()) {
                     case INDENT_INCREASE -> {
-                        return new ParserEvent.StartEvent(SEQUENCE);
+                        return new YamlEvent.StartEvent(SEQUENCE);
                     }
                     case INDENT_NO_CHANGE -> {
-                        return new ParserEvent.ScalarEvent();
+                        return new YamlEvent.ScalarEvent();
                     }
                     case INDENT_DECREASE -> {
                         state.setIndentationProcessed(true);
                         for (Collection collection: state.getCurrentToken().getIndentation().getCollection()) {
-                            state.getEventBuffer().add(new ParserEvent.EndEvent(collection));
+                            state.getEventBuffer().add(new YamlEvent.EndEvent(collection));
                         }
-                        return constructEvent(new ParserEvent.ScalarEvent(), tagStructure);
+                        return constructEvent(new YamlEvent.ScalarEvent(), tagStructure);
                     }
                 }
             }
             case MAPPING_START -> {
-                return new ParserEvent.StartEvent(Collection.MAPPING);
+                return new YamlEvent.StartEvent(Collection.MAPPING);
             }
             case LITERAL, FOLDED -> {
                 if (state.getLexerState().isFlowCollection()) {
@@ -1324,35 +1325,35 @@ public class YamlParser {
                 }
                 String value = blockScalar(state, state.getCurrentToken().getType() == FOLDED);
                 checkEmptyKey(state);
-                return new ParserEvent.ScalarEvent(value);
+                return new YamlEvent.ScalarEvent(value);
             }
             case ALIAS -> {
-                return new ParserEvent.AliasEvent(state.getCurrentToken().getValue());
+                return new YamlEvent.AliasEvent(state.getCurrentToken().getValue());
             }
             case ANCHOR, TAG, TAG_HANDLE -> {
-                ParserEvent event = nodeComplete(state, EXPECT_MAP_KEY, tagStructure);
+                YamlEvent event = nodeComplete(state, EXPECT_MAP_KEY, tagStructure);
                 if (explicitKey) {
                     return event;
                 }
-                if (event.getKind() == ParserEvent.EventKind.START_EVENT &&
-                        ((ParserEvent.StartEvent) event).getStartType() == Collection.MAPPING) {
-                    return new ParserEvent.StartEvent(Collection.MAPPING);
+                if (event.getKind() == YamlEvent.EventKind.START_EVENT &&
+                        ((YamlEvent.StartEvent) event).getStartType() == Collection.MAPPING) {
+                    return new YamlEvent.StartEvent(Collection.MAPPING);
                 }
-                if (event.getKind() == ParserEvent.EventKind.END_EVENT) {
+                if (event.getKind() == YamlEvent.EventKind.END_EVENT) {
                     state.getEventBuffer().add(0, event);
-                    return new ParserEvent.ScalarEvent();
+                    return new YamlEvent.ScalarEvent();
                 }
             }
             case MAPPING_END -> {
                 if (explicitKey) {
-                    state.getEventBuffer().add(new ParserEvent.ScalarEvent());
+                    state.getEventBuffer().add(new YamlEvent.ScalarEvent());
                 }
-                state.getEventBuffer().add(new ParserEvent.EndEvent(Collection.MAPPING));
-                return new ParserEvent.ScalarEvent();
+                state.getEventBuffer().add(new YamlEvent.EndEvent(Collection.MAPPING));
+                return new YamlEvent.ScalarEvent();
             }
         }
 
-        return new ParserEvent.ScalarEvent();
+        return new YamlEvent.ScalarEvent();
     }
 
     /**
@@ -1728,11 +1729,11 @@ public class YamlParser {
             case INDENT_INCREASE -> {
                 int collectionSize = indentation.getCollection().size();
                 state.getEventBuffer().add(
-                        new ParserEvent.StartEvent(indentation.getCollection().remove(collectionSize - 1)));
+                        new YamlEvent.StartEvent(indentation.getCollection().remove(collectionSize - 1)));
             }
             case INDENT_DECREASE -> {
                 for (Collection collection: indentation.getCollection()) {
-                    state.getEventBuffer().add(new ParserEvent.EndEvent(collection));
+                    state.getEventBuffer().add(new YamlEvent.EndEvent(collection));
                 }
             }
         }
