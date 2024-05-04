@@ -19,12 +19,16 @@
 package io.ballerina.stdlib.data.yaml;
 
 import io.ballerina.runtime.api.Environment;
+import io.ballerina.runtime.api.Future;
 import io.ballerina.runtime.api.values.BArray;
 import io.ballerina.runtime.api.values.BError;
 import io.ballerina.runtime.api.values.BMap;
+import io.ballerina.runtime.api.values.BObject;
 import io.ballerina.runtime.api.values.BStream;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.runtime.api.values.BTypedesc;
+import io.ballerina.stdlib.data.yaml.io.DataReaderTask;
+import io.ballerina.stdlib.data.yaml.io.DataReaderThreadPool;
 import io.ballerina.stdlib.data.yaml.parser.YamlParser;
 
 import java.io.ByteArrayInputStream;
@@ -55,7 +59,11 @@ public class Native {
         }
     }
 
-    public static Object parseStream(Environment env, BStream json, BMap<BString, Object> options, BTypedesc typed) {
+    public static Object parseStream(Environment env, BStream yaml, BMap<BString, Object> options, BTypedesc typed) {
+        final BObject iteratorObj = yaml.getIteratorObj();
+        final Future future = env.markAsync();
+        DataReaderTask task = new DataReaderTask(env, iteratorObj, future, typed, options);
+        DataReaderThreadPool.EXECUTOR_SERVICE.submit(task);
         return null;
     }
 }
