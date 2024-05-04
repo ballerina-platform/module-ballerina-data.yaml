@@ -1,10 +1,7 @@
 package io.ballerina.stdlib.data.yaml.parser;
 
-import io.ballerina.runtime.api.TypeTags;
 import io.ballerina.runtime.api.types.Field;
 import io.ballerina.runtime.api.types.RecordType;
-import io.ballerina.runtime.api.types.Type;
-import io.ballerina.runtime.api.types.UnionType;
 import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
@@ -20,35 +17,6 @@ public class ParserUtils {
     public static final String FIELD_REGEX = "\\$field\\$\\.";
     public static final String NAME = "Name";
     public static final BString VALUE = StringUtils.fromString("value");
-
-    public static boolean isSupportedUnionType(UnionType type) {
-        for (Type memberType : type.getMemberTypes()) {
-            switch (memberType.getTag()) {
-                case TypeTags.RECORD_TYPE_TAG, TypeTags.OBJECT_TYPE_TAG, TypeTags.MAP_TAG, TypeTags.JSON_TAG,
-                        TypeTags.ANYDATA_TAG -> {
-                    return false;
-                }
-                case TypeTags.UNION_TAG -> {
-                    return !isSupportedUnionType(type);
-                }
-            }
-        }
-        return true;
-    }
-
-    public static boolean possibleYamlStream(UnionType type) {
-        for (Type memberType : type.getMemberTypes()) {
-            switch (memberType.getTag()) {
-                case TypeTags.ARRAY_TAG, TypeTags.TUPLE_TAG -> {
-                    return true;
-                }
-                case TypeTags.UNION_TAG -> {
-                    return possibleYamlStream((UnionType) memberType);
-                }
-            }
-        }
-        return false;
-    }
 
     public static Map<String, Field> getAllFieldsInRecord(RecordType recordType) {
         BMap<BString, Object> annotations = recordType.getAnnotations();

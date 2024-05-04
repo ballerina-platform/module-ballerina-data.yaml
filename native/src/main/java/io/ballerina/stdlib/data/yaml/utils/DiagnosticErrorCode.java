@@ -12,8 +12,8 @@ public enum DiagnosticErrorCode {
     INCOMPATIBLE_VALUE_FOR_FIELD("JSON_ERROR_007", "incompatible.value.for.field"),
     REQUIRED_FIELD_NOT_PRESENT("JSON_ERROR_008", "required.field.not.present"),
     INVALID_TYPE_FOR_FIELD("JSON_ERROR_009", "invalid.type.for.field"),
-    CANNOT_CONVERT_TO_EXPECTED_TYPE("JSON_ERROR_011", "cannot.convert.to.expected.type");
-
+    CANNOT_CONVERT_TO_EXPECTED_TYPE("JSON_ERROR_011", "cannot.convert.to.expected.type"),
+    UNDEFINED_FIELD("YAML_ERROR_005", "undefined.field");
     String diagnosticId;
     String messageKey;
 

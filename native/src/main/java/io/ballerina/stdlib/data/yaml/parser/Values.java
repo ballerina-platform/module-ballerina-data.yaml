@@ -23,6 +23,7 @@ import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
 import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
+import org.ballerinalang.langlib.value.CloneReadOnly;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -99,7 +100,8 @@ public class Values {
         state.parserContexts.push(YamlParser.ParserContext.ARRAY);
         Type expType = state.expectedTypes.peek();
         // In this point we know rhs is json[] or anydata[] hence init index counter.
-        if (expType.getTag() == TypeTags.JSON_TAG || expType.getTag() == TypeTags.ANYDATA_TAG) {
+        if (expType.getTag() == TypeTags.JSON_TAG || expType.getTag() == TypeTags.ANYDATA_TAG
+                || expType.getTag() == TypeTags.UNION_TAG) {
             state.arrayIndexes.push(0);
         }
         return initArrayValue(state, expType);
@@ -152,9 +154,9 @@ public class Values {
         state.fieldNameHierarchy.peek().push(jsonFieldName);
     }
 
-    static Object convertAndUpdateCurrentValueNode(YamlParser.ComposerState sm, BString value, Type type) {
+    static Object convertAndUpdateCurrentValueNode(YamlParser.ComposerState sm, String value, Type type) {
         Object currentYaml = sm.currentYamlNode;
-        Object convertedValue = convertToExpectedType(value, type);
+        Object convertedValue = convertToExpectedType(StringUtils.fromString(value), type);
         if (convertedValue instanceof BError) {
             if (sm.currentField != null) {
                 throw DiagnosticLog.error(DiagnosticErrorCode.INCOMPATIBLE_VALUE_FOR_FIELD, value, type,
@@ -200,10 +202,27 @@ public class Values {
     }
 
     private static Object convertToExpectedType(BString value, Type type) {
-        if (type.getTag() == TypeTags.ANYDATA_TAG) {
-            return fromStringWithType(value, PredefinedTypes.TYPE_JSON);
+        switch (type.getTag()) {
+            case TypeTags.CHAR_STRING_TAG -> {
+                if (value.length() != 1) {
+                    return DiagnosticLog.error(DiagnosticErrorCode.INCOMPATIBLE_TYPE, type, value);
+                }
+                return value;
+            }
+            case TypeTags.FINITE_TYPE_TAG -> {
+                return ((FiniteType) type).getValueSpace().stream()
+                        .filter(finiteValue -> !(convertToSingletonValue(value.getValue(), finiteValue)
+                                instanceof BError))
+                        .findFirst()
+                        .orElseGet(() -> DiagnosticLog.error(DiagnosticErrorCode.INCOMPATIBLE_TYPE, type, value));
+            }
+            case TypeTags.TYPE_REFERENCED_TYPE_TAG -> {
+                return convertToExpectedType(value, TypeUtils.getReferredType(type));
+            }
+            default -> {
+                return fromStringWithType(value, type);
+            }
         }
-        return fromStringWithType(value, type);
     }
 
     private static Optional<BMap<BString, Object>> initNewMapValue(YamlParser.ComposerState state, Type expType) {
@@ -321,10 +340,22 @@ public class Values {
     private static Object convertToSingletonValue(String str, Object singletonValue) {
         String singletonStr = String.valueOf(singletonValue);
         if (str.equals(singletonStr)) {
-            return fromStringWithType(StringUtils.fromString(str), TypeUtils.getType(singletonValue));
+            BString value = StringUtils.fromString(str);
+            Type expType = TypeUtils.getType(singletonValue);
+            return fromStringWithType(value, expType);
         } else {
             return returnError(str, singletonStr);
         }
+    }
+
+    public static BString convertValueToBString(Object value) {
+        if (value instanceof BString) {
+            return (BString) value;
+        } else if (value instanceof Long || value instanceof String || value instanceof Integer
+                || value instanceof BDecimal || value instanceof Double) {
+            return StringUtils.fromString(String.valueOf(value));
+        }
+        throw new RuntimeException("cannot convert to BString");
     }
 
     private static int stringToByte(String value) throws NumberFormatException {
@@ -452,20 +483,6 @@ public class Values {
         }
     }
 
-    static Type findMappingTypeFromUnionType(UnionType type) {
-        List<Type> memberTypes = new ArrayList<>(type.getMemberTypes());
-        for (Type memType: memberTypes) {
-            switch (memType.getTag()) {
-                case TypeTags.ANYDATA_TAG, TypeTags.MAP_TAG, TypeTags.RECORD_TYPE_TAG, TypeTags.JSON_TAG -> {
-                    return memType;
-                }
-                default -> {
-                }
-            }
-        }
-        return null;
-    }
-
     static void updateExpectedType(YamlParser.ComposerState state) {
         if (state.unionDepth > 0) {
             return;
@@ -475,12 +492,10 @@ public class Values {
     }
 
     static void updateNextMapValueBasedOnExpType(YamlParser.ComposerState state) {
-//        updateExpectedType(state);
         updateNextMapValue(state);
     }
 
     static void updateNextArrayValueBasedOnExpType(YamlParser.ComposerState state) {
-//        updateExpectedType(state);
         updateNextArrayValue(state);
     }
 
@@ -527,22 +542,8 @@ public class Values {
         return returnError(string.getValue(), expType.toString());
     }
 
-    static void validateListSize(int currentIndex, Type expType) {
-        int expLength = 0;
-        if (expType == null) {
-            return;
-        }
-
-        if (expType.getTag() == TypeTags.ARRAY_TAG) {
-            expLength = ((ArrayType) expType).getSize();
-        } else if (expType.getTag() == TypeTags.TUPLE_TAG) {
-            TupleType tupleType = (TupleType) expType;
-            expLength = tupleType.getTupleTypes().size();
-        }
-
-        if (expLength >= 0 && expLength > currentIndex + 1) {
-            throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
-        }
+    public static Object constructReadOnlyValue(Object value) {
+        return CloneReadOnly.cloneReadOnly(value);
     }
 
     private static boolean hasFloatOrDecimalLiteralSuffix(String value) {

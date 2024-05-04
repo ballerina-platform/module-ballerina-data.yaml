@@ -1,0 +1,283 @@
+package io.ballerina.stdlib.data.yaml.utils;
+
+import io.ballerina.runtime.api.PredefinedTypes;
+import io.ballerina.runtime.api.TypeTags;
+import io.ballerina.runtime.api.creators.ValueCreator;
+import io.ballerina.runtime.api.flags.SymbolFlags;
+import io.ballerina.runtime.api.types.ArrayType;
+import io.ballerina.runtime.api.types.Field;
+import io.ballerina.runtime.api.types.IntersectionType;
+import io.ballerina.runtime.api.types.MapType;
+import io.ballerina.runtime.api.types.RecordType;
+import io.ballerina.runtime.api.types.TupleType;
+import io.ballerina.runtime.api.types.Type;
+import io.ballerina.runtime.api.types.UnionType;
+import io.ballerina.runtime.api.utils.StringUtils;
+import io.ballerina.runtime.api.utils.TypeUtils;
+import io.ballerina.runtime.api.utils.ValueUtils;
+import io.ballerina.runtime.api.values.BArray;
+import io.ballerina.runtime.api.values.BError;
+import io.ballerina.runtime.api.values.BMap;
+import io.ballerina.runtime.api.values.BString;
+import io.ballerina.stdlib.data.yaml.parser.ParserUtils;
+import io.ballerina.stdlib.data.yaml.parser.Values;
+
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Stack;
+
+public class JsonTraverse {
+
+    private static final ThreadLocal<JsonTree> tlJsonTree = ThreadLocal.withInitial(JsonTree::new);
+
+    public static Object traverse(Object json, Type type) {
+        JsonTree jsonTree = tlJsonTree.get();
+        try {
+            return jsonTree.traverseJson(json, type);
+        } finally {
+            jsonTree.reset();
+        }
+    }
+
+    private static class JsonTree {
+        Field currentField;
+        Stack<Map<String, Field>> fieldHierarchy = new Stack<>();
+        Stack<Type> restType = new Stack<>();
+        Deque<String> fieldNames = new ArrayDeque<>();
+        Type rootArray;
+        boolean allowDataProjection = true;
+
+        void reset() {
+            currentField = null;
+            fieldHierarchy.clear();
+            restType.clear();
+            fieldNames.clear();
+            rootArray = null;
+        }
+
+        private Object traverseJson(Object json, Type type) {
+            Type referredType = TypeUtils.getReferredType(type);
+            switch (referredType.getTag()) {
+                case TypeTags.RECORD_TYPE_TAG -> {
+                    RecordType recordType = (RecordType) referredType;
+                    fieldHierarchy.push(ParserUtils.getAllFieldsInRecord(recordType));
+                    restType.push(recordType.getRestFieldType());
+                    return traverseMapJsonOrArrayJson(json,
+                            ValueCreator.createRecordValue(type.getPackage(), type.getName()), referredType);
+                }
+                case TypeTags.ARRAY_TAG -> {
+                    rootArray = referredType;
+                    return traverseMapJsonOrArrayJson(json, ValueCreator.createArrayValue((ArrayType) referredType),
+                            referredType);
+                }
+                case TypeTags.TUPLE_TAG -> {
+                    rootArray = referredType;
+                    return traverseMapJsonOrArrayJson(json, ValueCreator.createTupleValue((TupleType) referredType),
+                            referredType);
+                }
+                case TypeTags.NULL_TAG, TypeTags.BOOLEAN_TAG, TypeTags.INT_TAG, TypeTags.FLOAT_TAG,
+                        TypeTags.DECIMAL_TAG, TypeTags.STRING_TAG, TypeTags.CHAR_STRING_TAG , TypeTags.BYTE_TAG,
+                        TypeTags.SIGNED8_INT_TAG, TypeTags.SIGNED16_INT_TAG, TypeTags.SIGNED32_INT_TAG,
+                        TypeTags.UNSIGNED8_INT_TAG, TypeTags.UNSIGNED16_INT_TAG, TypeTags.UNSIGNED32_INT_TAG,
+                        TypeTags.FINITE_TYPE_TAG -> {
+                   return Values.fromStringWithType(Values.convertValueToBString(json), referredType);
+                }
+                case TypeTags.UNION_TAG -> {
+                    for (Type memberType : ((UnionType) referredType).getMemberTypes()) {
+                        try {
+                            return traverseJson(json, memberType);
+                        } catch (Exception e) {
+                            // Ignore
+                        }
+                    }
+                    throw DiagnosticLog.error(DiagnosticErrorCode.INVALID_TYPE, type, PredefinedTypes.TYPE_ANYDATA);
+                }
+                case TypeTags.JSON_TAG, TypeTags.ANYDATA_TAG -> {
+                    return json;
+                }
+                case TypeTags.MAP_TAG -> {
+                    MapType mapType = (MapType) referredType;
+                    fieldHierarchy.push(new HashMap<>());
+                    restType.push(mapType.getConstrainedType());
+                    return traverseMapJsonOrArrayJson(json, ValueCreator.createMapValue(mapType), referredType);
+                }
+                case TypeTags.INTERSECTION_TAG -> {
+                    Type effectiveType = ((IntersectionType) referredType).getEffectiveType();
+                    if (!SymbolFlags.isFlagOn(SymbolFlags.READONLY, effectiveType.getFlags())) {
+                        throw DiagnosticLog.error(DiagnosticErrorCode.UNSUPPORTED_TYPE, type);
+                    }
+                    for (Type constituentType : ((IntersectionType) referredType).getConstituentTypes()) {
+                        if (constituentType.getTag() == TypeTags.READONLY_TAG) {
+                            continue;
+                        }
+                        return Values.constructReadOnlyValue(traverseJson(json, constituentType));
+                    }
+                    throw DiagnosticLog.error(DiagnosticErrorCode.UNSUPPORTED_TYPE, type);
+                }
+                default ->
+                        throw DiagnosticLog.error(DiagnosticErrorCode.INVALID_TYPE, type, PredefinedTypes.TYPE_ANYDATA);
+            }
+        }
+
+        private Object traverseMapJsonOrArrayJson(Object json, Object currentJsonNode, Type type) {
+            if (json instanceof BMap bMap) {
+                return traverseMapValue(bMap, currentJsonNode);
+            } else if (json instanceof BArray bArray) {
+                return traverseArrayValue(bArray, currentJsonNode);
+            } else {
+                // JSON value not compatible with map or array.
+                if (type.getTag() == TypeTags.RECORD_TYPE_TAG) {
+                    this.fieldHierarchy.pop();
+                    this.restType.pop();
+                }
+
+                if (fieldNames.isEmpty()) {
+                    throw DiagnosticLog.error(DiagnosticErrorCode.INCOMPATIBLE_TYPE, type, json);
+                }
+                throw DiagnosticLog.error(DiagnosticErrorCode.INVALID_TYPE_FOR_FIELD, getCurrentFieldPath());
+            }
+        }
+
+        private Object traverseMapValue(BMap<BString, Object> map, Object currentJsonNode) {
+            for (BString key : map.getKeys()) {
+                currentField = fieldHierarchy.peek().remove(key.toString());
+                if (currentField == null) {
+                    // Add to the rest field
+                    if (restType.peek() != null) {
+                        Type restFieldType = TypeUtils.getReferredType(restType.peek());
+                        addRestField(restFieldType, key, map.get(key), currentJsonNode);
+                    }
+                    if (allowDataProjection) {
+                        continue;
+                    }
+                    throw DiagnosticLog.error(DiagnosticErrorCode.UNDEFINED_FIELD, key);
+                }
+
+                String fieldName = currentField.getFieldName();
+                fieldNames.push(fieldName);
+                Type currentFieldType = TypeUtils.getReferredType(currentField.getFieldType());
+                int currentFieldTypeTag = currentFieldType.getTag();
+                Object mapValue = map.get(key);
+
+                if (!currentFieldType.isNilable() && mapValue == null
+                        && SymbolFlags.isFlagOn(currentField.getFlags(), SymbolFlags.OPTIONAL)) {
+                    continue;
+                }
+
+                switch (currentFieldTypeTag) {
+                    case TypeTags.NULL_TAG, TypeTags.BOOLEAN_TAG, TypeTags.INT_TAG, TypeTags.FLOAT_TAG,
+                            TypeTags.DECIMAL_TAG, TypeTags.STRING_TAG -> {
+                        BString bStringVal = StringUtils.fromString(mapValue.toString());
+//                        Object value = convertToBasicType(mapValue, currentFieldType);
+                        Object value = Values.fromStringWithType(bStringVal, currentFieldType);
+                        ((BMap<BString, Object>) currentJsonNode).put(StringUtils.fromString(fieldNames.pop()), value);
+                    }
+                    default ->
+                            ((BMap<BString, Object>) currentJsonNode).put(StringUtils.fromString(fieldName),
+                                    traverseJson(mapValue, currentFieldType));
+                }
+            }
+            Map<String, Field> currentField = fieldHierarchy.pop();
+            checkOptionalFieldsAndLogError(currentField);
+            restType.pop();
+            return currentJsonNode;
+        }
+
+        private Object traverseArrayValue(BArray array, Object currentJsonNode) {
+            switch (rootArray.getTag()) {
+                case TypeTags.ARRAY_TAG -> {
+                    ArrayType arrayType = (ArrayType) rootArray;
+                    int expectedArraySize = arrayType.getSize();
+                    long sourceArraySize = array.getLength();
+                    if (!allowDataProjection && expectedArraySize < sourceArraySize) {
+                        throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+                    }
+
+                    Type elementType = arrayType.getElementType();
+                    if (expectedArraySize == -1 || expectedArraySize > sourceArraySize) {
+                        traverseArrayMembers(array.getLength(), array, elementType, currentJsonNode);
+                    } else {
+                        traverseArrayMembers(expectedArraySize, array, elementType, currentJsonNode);
+                    }
+                }
+                case TypeTags.TUPLE_TAG -> {
+                    TupleType tupleType = (TupleType) rootArray;
+                    Type restType = tupleType.getRestType();
+                    int expectedTupleTypeCount = tupleType.getTupleTypes().size();
+                    for (int i = 0; i < array.getLength(); i++) {
+                        Object jsonMember = array.get(i);
+                        Object nextJsonNode;
+                        if (i < expectedTupleTypeCount) {
+                            nextJsonNode = traverseJson(jsonMember, tupleType.getTupleTypes().get(i));
+                        } else if (restType != null) {
+                            nextJsonNode = traverseJson(jsonMember, restType);
+                        } else if (!allowDataProjection) {
+                            throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+                        } else {
+                            continue;
+                        }
+                        ((BArray) currentJsonNode).add(i, nextJsonNode);
+                    }
+                }
+            }
+            return currentJsonNode;
+        }
+
+        private void traverseArrayMembers(long length, BArray array, Type elementType, Object currentJsonNode) {
+            for (int i = 0; i < length; i++) {
+                ((BArray) currentJsonNode).add(i, traverseJson(array.get(i), elementType));
+            }
+        }
+
+        private void addRestField(Type restFieldType, BString key, Object jsonMember, Object currentJsonNode) {
+            Object nextJsonValue;
+            switch (restFieldType.getTag()) {
+                case TypeTags.ANYDATA_TAG, TypeTags.JSON_TAG ->
+                        ((BMap<BString, Object>) currentJsonNode).put(key, jsonMember);
+                case TypeTags.BOOLEAN_TAG, TypeTags.INT_TAG, TypeTags.FLOAT_TAG, TypeTags.DECIMAL_TAG,
+                        TypeTags.STRING_TAG -> {
+                    ((BMap<BString, Object>) currentJsonNode).put(key, convertToBasicType(jsonMember, restFieldType));
+                }
+                default -> {
+                    nextJsonValue = traverseJson(jsonMember, restFieldType);
+                    ((BMap<BString, Object>) currentJsonNode).put(key, nextJsonValue);
+                }
+            }
+        }
+
+        private void checkOptionalFieldsAndLogError(Map<String, Field> currentField) {
+            currentField.values().forEach(field -> {
+                if (field.getFieldType().isNilable()) {
+                    return;
+                }
+                if (SymbolFlags.isFlagOn(field.getFlags(), SymbolFlags.REQUIRED)) {
+                    throw DiagnosticLog.error(DiagnosticErrorCode.REQUIRED_FIELD_NOT_PRESENT, field.getFieldName());
+                }
+            });
+        }
+
+        private Object convertToBasicType(Object json, Type targetType) {
+            try {
+                return ValueUtils.convert(json, targetType);
+            } catch (BError e) {
+                if (fieldNames.isEmpty()) {
+                    throw DiagnosticLog.error(DiagnosticErrorCode.INCOMPATIBLE_TYPE, targetType, String.valueOf(json));
+                }
+                throw DiagnosticLog.error(DiagnosticErrorCode.INCOMPATIBLE_VALUE_FOR_FIELD, String.valueOf(json),
+                        targetType, getCurrentFieldPath());
+            }
+        }
+
+        private String getCurrentFieldPath() {
+            Iterator<String> itr = fieldNames.descendingIterator();
+            StringBuilder sb = new StringBuilder(itr.hasNext() ? itr.next() : "");
+            while (itr.hasNext()) {
+                sb.append(".").append(itr.next());
+            }
+            return sb.toString();
+        }
+    }
+}

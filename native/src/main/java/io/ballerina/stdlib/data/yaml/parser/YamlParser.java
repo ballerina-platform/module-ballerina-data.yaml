@@ -22,6 +22,7 @@ import io.ballerina.stdlib.data.yaml.lexer.Token;
 import io.ballerina.stdlib.data.yaml.lexer.YamlLexer;
 import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
 import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
+import io.ballerina.stdlib.data.yaml.utils.JsonTraverse;
 
 import java.io.Reader;
 import java.util.ArrayDeque;
@@ -81,7 +82,6 @@ public class YamlParser {
         Object currentYamlNode;
 
         Field currentField;
-//        Deque<String> fieldNames = new ArrayDeque<>();
         Deque<Object> nodesStack = new ArrayDeque<>();
         Stack<Map<String, Field>> fieldHierarchy = new Stack<>();
         Stack<Map<String, Field>> visitedFieldHierarchy = new Stack<>();
@@ -119,12 +119,13 @@ public class YamlParser {
             finalizeArrayObjectAndRemoveExpectedType();
         }
 
-        public void checkUnionAndFinalizeNonArrayObject() {
+        public void checkUnionAndFinalizeNonArrayObject(boolean isParentSequence) {
             if (unionDepth > 0) {
                 fieldNameHierarchy.pop();
                 finalizeObject();
+                return;
             }
-            finalizeNonArrayObjectAndRemoveExpectedType();
+            finalizeNonArrayObjectAndRemoveExpectedType(isParentSequence);
         }
 
         private void finalizeArrayObjectAndRemoveExpectedType() {
@@ -132,8 +133,11 @@ public class YamlParser {
             expectedTypes.pop();
         }
 
-        public void finalizeNonArrayObjectAndRemoveExpectedType() {
+        public void finalizeNonArrayObjectAndRemoveExpectedType(boolean isParentSequence) {
             finalizeNonArrayObject();
+            if (!isParentSequence) {
+                expectedTypes.pop();
+            }
         }
 
         private void finalizeNonArrayObject() {
@@ -159,11 +163,11 @@ public class YamlParser {
             finalizeObject();
         }
 
-        private Object verifyAndConvertToUnion(Object json) {
+        public Object verifyAndConvertToUnion(Object json) {
             if (unionDepth > 0) {
                 return json;
             }
-            return new Object(); // TODO:
+            return JsonTraverse.traverse(json, expectedTypes.peek());
         }
 
         private void finalizeObject() {
@@ -359,8 +363,7 @@ public class YamlParser {
                 return;
             }
         }
-        BString bString = StringUtils.fromString(value);
-        state.currentYamlNode = Values.convertAndUpdateCurrentValueNode(state, bString, expType);
+        state.currentYamlNode = Values.convertAndUpdateCurrentValueNode(state, value, expType);
     }
 
     public static Object composeSequence(YamlParser.ComposerState state, boolean flowStyle) {
@@ -505,20 +508,27 @@ public class YamlParser {
             } else {
                 Object value = handleEvent(state, event, true);
                 if (value instanceof String scalarValue) {
-                    Type expType = state.expectedTypes.pop();
-                    if (expType == null && state.currentField == null) {
-                        state.fieldNameHierarchy.peek().pop();
-                    } else if (expType == null) {
-                        break;
-                    } else if (state.jsonFieldDepth > 0 || state.currentField != null) {
+                    Type expType;
+                    if (state.unionDepth > 0) {
+                        expType = PredefinedTypes.TYPE_JSON;
                         state.currentYamlNode = Values.convertAndUpdateCurrentValueNode(state,
-                                StringUtils.fromString(scalarValue), expType);
-                    } else if (state.restType.peek() != null) {
-                        try {
+                                scalarValue, expType);
+                    } else {
+                        expType = state.expectedTypes.pop();
+                        if (expType == null && state.currentField == null) {
+                            state.fieldNameHierarchy.peek().pop();
+                        } else if (expType == null) {
+                            break;
+                        } else if (state.jsonFieldDepth > 0 || state.currentField != null) {
                             state.currentYamlNode = Values.convertAndUpdateCurrentValueNode(state,
-                                    StringUtils.fromString(scalarValue), expType);
-                            // this element will be ignored in projection
-                        } catch (BError ignored) { }
+                                    scalarValue, expType);
+                        } else if (state.restType.peek() != null) {
+                            try {
+                                state.currentYamlNode = Values.convertAndUpdateCurrentValueNode(state,
+                                        scalarValue, expType);
+                                // this element will be ignored in projection
+                            } catch (BError ignored) { }
+                        }
                     }
                 }
             }
@@ -531,10 +541,7 @@ public class YamlParser {
             event = parse(state.parserState, EXPECT_MAP_KEY);
         }
 
-        state.checkUnionAndFinalizeNonArrayObject();
-        if (!isParentSequence) {
-            state.expectedTypes.pop();
-        }
+        state.checkUnionAndFinalizeNonArrayObject(isParentSequence);
         return structure;
     }
 
