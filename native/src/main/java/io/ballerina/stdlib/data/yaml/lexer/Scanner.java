@@ -1,5 +1,7 @@
 package io.ballerina.stdlib.data.yaml.lexer;
 
+import io.ballerina.stdlib.data.yaml.utils.Error;
+
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
@@ -32,6 +34,7 @@ public class Scanner {
     public static final Scan DIGIT_SCANNER = new DigitScanner();
     public static final Scan DOUBLE_QUOTE_CHAR_SCANNER = new DoubleQuoteCharScanner();
     public static final Scan SINGLE_QUOTE_CHAR_SCANNER = new SingleQuoteCharScanner();
+    public static final Scan COMMENT_SCANNER = new CommentScanner();
     public static final Map<Character, String> ESCAPED_CHAR_MAP;
 
     static {
@@ -63,7 +66,7 @@ public class Scanner {
      * @param scan  Scan instance that is going to scan
      * @param token Targeting token upon successful scan
      */
-    public static void iterate(LexerState sm, Scan scan, Token.TokenType token) {
+    public static void iterate(LexerState sm, Scan scan, Token.TokenType token) throws Error.YamlParserException {
         iterate(sm, scan, token, false);
     }
 
@@ -76,7 +79,8 @@ public class Scanner {
      * @param token   Targeting token upon successful scan
      * @param include True when the last character belongs to the token
      */
-    public static void iterate(LexerState sm, Scan scan, Token.TokenType token, boolean include) {
+    public static void iterate(LexerState sm, Scan scan, Token.TokenType token, boolean include)
+            throws Error.YamlParserException {
         while (sm.getColumn() < sm.getRemainingBufferedSize()) {
             if (scan.scan(sm)) {
                 if (include && sm.peek() != '\n') {
@@ -98,7 +102,7 @@ public class Scanner {
     }
 
     interface Scan {
-        boolean scan(LexerState sm);
+        boolean scan(LexerState sm) throws Error.YamlParserException;
     }
 
     public static class SingleQuoteCharScanner implements Scan {
@@ -107,7 +111,7 @@ public class Scanner {
          * Process double quoted scalar values.
          */
         @Override
-        public boolean scan(LexerState sm) {
+        public boolean scan(LexerState sm) throws Error.YamlParserException {
             // Process nb-json characters
             if (matchPattern(sm, List.of(JSON_PATTERN), List.of(new Utils.CharPattern('\'')))) {
                 sm.appendToLexeme(Character.toString(sm.peek()));
@@ -124,7 +128,7 @@ public class Scanner {
                 return true;
             }
 
-            throw new RuntimeException("Invalid single quote char");
+            throw new Error.YamlParserException("invalid single quote char", sm.getLine(), sm.getColumn());
         }
     }
 
@@ -136,7 +140,7 @@ public class Scanner {
          * @param sm - Current lexer state
          */
         @Override
-        public boolean scan(LexerState sm) {
+        public boolean scan(LexerState sm) throws Error.YamlParserException {
             // Process nb-json characters
             if (matchPattern(sm, List.of(JSON_PATTERN),
                     List.of(new Utils.CharPattern('\\'), new Utils.CharPattern('\"')))) {
@@ -157,7 +161,7 @@ public class Scanner {
                 return true;
             }
 
-            throw new RuntimeException("Invalid double quoted character");
+            throw new Error.YamlParserException("invalid double quoted character", sm.getLine(), sm.getColumn());
         }
     }
 
@@ -170,7 +174,7 @@ public class Scanner {
          * @return false to continue and true to terminate the token.
          */
         @Override
-        public boolean scan(LexerState sm) {
+        public boolean scan(LexerState sm) throws Error.YamlParserException {
             // Check for URI character
             if (matchPattern(sm, List.of(URI_PATTERN, WORD_PATTERN),
                     List.of(FLOW_INDICATOR_PATTERN, new Utils.CharPattern('!')))) {
@@ -189,7 +193,7 @@ public class Scanner {
                 return false;
             }
 
-            throw new RuntimeException("Invalid tag character");
+            throw new Error.YamlParserException("invalid tag character", sm.getLine(), sm.getColumn());
         }
     }
 
@@ -201,7 +205,7 @@ public class Scanner {
          * @param sm - Current lexer state
          */
         @Override
-        public boolean scan(LexerState sm) {
+        public boolean scan(LexerState sm) throws Error.YamlParserException {
             if (matchPattern(sm, List.of(DECIMAL_PATTERN))) {
                 sm.appendToLexeme(Character.toString(sm.peek()));
                 return false;
@@ -210,7 +214,7 @@ public class Scanner {
             if (WHITE_SPACE_PATTERN.pattern(currentChar) || currentChar == '.') {
                 return true;
             }
-            throw new RuntimeException("Invalid digit character");
+            throw new Error.YamlParserException("invalid digit character", sm.getLine(), sm.getColumn());
         }
     }
 
@@ -235,6 +239,19 @@ public class Scanner {
         }
     }
 
+    public static class CommentScanner implements Scan {
+        /**
+         * Scan the comment.
+         *
+         * @param sm - Current lexer state
+         * @return - False to continue. True to terminate the token.
+         */
+        @Override
+        public boolean scan(LexerState sm) {
+            return !matchPattern(sm, List.of(PRINTABLE_PATTERN), List.of(LINE_BREAK_PATTERN));
+        }
+    }
+
     public static class TagHandleScanner implements Scan {
         private final boolean differentiate;
 
@@ -248,7 +265,7 @@ public class Scanner {
          * @param sm - Current lexer state
          */
         @Override
-        public boolean scan(LexerState sm) {
+        public boolean scan(LexerState sm) throws Error.YamlParserException {
 
             // Scan the word of the name tag.
             if (matchPattern(sm, List.of(WORD_PATTERN, URI_PATTERN),
@@ -287,7 +304,7 @@ public class Scanner {
                 return true;
             }
 
-            throw new RuntimeException("Invalid tag handle runtime exception");
+            throw new Error.YamlParserException("invalid tag handle runtime exception", sm.getLine(), sm.getColumn());
         }
     }
 
@@ -304,7 +321,7 @@ public class Scanner {
          * @param sm - Current lexer state
          */
         @Override
-        public boolean scan(LexerState sm) {
+        public boolean scan(LexerState sm) throws Error.YamlParserException {
 
             if (allowWhiteSpace) {
                 if (matchPattern(sm, List.of(LINE_BREAK_PATTERN))) {
@@ -321,7 +338,7 @@ public class Scanner {
                 return false;
             }
 
-            throw new RuntimeException("Invalid printable character");
+            throw new Error.YamlParserException("invalid printable character", sm.getLine(), sm.getColumn());
         }
     }
 
@@ -338,7 +355,7 @@ public class Scanner {
          * @param sm - Current lexer state
          */
         @Override
-        public boolean scan(LexerState sm) {
+        public boolean scan(LexerState sm) throws Error.YamlParserException {
             int currentChar = sm.peek();
 
             // Check for URI characters
@@ -363,7 +380,7 @@ public class Scanner {
                 return true;
             }
 
-            throw new RuntimeException("Invalid URI character");
+            throw new Error.YamlParserException("invalid URI character", sm.getLine(), sm.getColumn());
         }
     }
 
@@ -376,7 +393,7 @@ public class Scanner {
          * @return False to continue. True to terminate the token. An error on failure.
          */
         @Override
-        public boolean scan(LexerState sm) {
+        public boolean scan(LexerState sm) throws Error.YamlParserException {
             StringBuilder whitespace = new StringBuilder();
             int numWhitespace = 0;
             int peekAtIndex = sm.peek();
@@ -413,7 +430,7 @@ public class Scanner {
 
             // Check for mapping value with a space after it
             if (peekAtIndex == ':') {
-                if (!Utils.discernPlanarFromIndicator(sm)) {
+                if (!Utils.discernPlanarFromIndicator(sm, numWhitespace + 1)) {
                     return true;
                 }
                 sm.forward(numWhitespace);
@@ -421,7 +438,7 @@ public class Scanner {
                 return false;
             }
 
-            throw new RuntimeException("Invalid planar character");
+            throw new Error.YamlParserException("invalid planar character", sm.getLine(), sm.getColumn());
         }
     }
 
@@ -445,7 +462,8 @@ public class Scanner {
         }
     }
 
-    private static void scanUnicodeEscapedCharacters(LexerState sm, char escapedChar, int length) {
+    private static void scanUnicodeEscapedCharacters(LexerState sm, char escapedChar, int length)
+            throws Error.YamlParserException {
 
         StringBuilder unicodeDigits = new StringBuilder();
         // Check if the digits adhere to the hexadecimal code pattern.
@@ -456,7 +474,8 @@ public class Scanner {
                 unicodeDigits.append(Character.toString(peek));
                 continue;
             }
-            throw new RuntimeException("Expected a unicode character after escaped char");
+            throw new Error.YamlParserException("expected a unicode character after escaped char",
+                    sm.getLine(), sm.getColumn());
         }
 
         // Check if the lexeme can be converted to hexadecimal
@@ -465,7 +484,7 @@ public class Scanner {
         sm.appendToLexeme(new String(Character.toChars(hexResult)));
     }
 
-    private static void escapedCharacterScan(LexerState sm) {
+    private static void escapedCharacterScan(LexerState sm) throws Error.YamlParserException {
         int currentChar = sm.peek();
 
         // Process double escape character
@@ -495,6 +514,6 @@ public class Scanner {
                 return;
             }
         }
-        throw new RuntimeException("Invalid escape character");
+        throw new Error.YamlParserException("invalid escape character", sm.getLine(), sm.getColumn());
     }
 }

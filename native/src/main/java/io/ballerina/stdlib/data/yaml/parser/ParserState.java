@@ -5,6 +5,7 @@ import io.ballerina.stdlib.data.yaml.common.Types;
 import io.ballerina.stdlib.data.yaml.lexer.CharacterReader;
 import io.ballerina.stdlib.data.yaml.lexer.LexerState;
 import io.ballerina.stdlib.data.yaml.lexer.Token;
+import io.ballerina.stdlib.data.yaml.utils.Error;
 
 import java.io.Reader;
 import java.util.ArrayList;
@@ -190,14 +191,22 @@ public class ParserState {
         this.numLines = numLines;
     }
 
-    public void initLexer() throws Exception {
+    public int getLine() {
+        return lexerState.getLine();
+    }
+
+    public int getColumn() {
+        return lexerState.getColumn();
+    }
+
+    public void initLexer() throws Error.YamlParserException {
         lineIndex += 1;
         explicitDoc = false;
         expectBlockSequenceValue = false;
         tagPropertiesInLine = false;
         lexerState.updateNewLineProps();
         if (getLexerState().isEndOfStream()) {
-            throw new Exception("END of stream reached");
+            throw new Error.YamlParserException("END of stream reached", lexerState.getLine(), lexerState.getColumn());
         }
     }
 }

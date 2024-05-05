@@ -3,6 +3,7 @@ package io.ballerina.stdlib.data.yaml.parser;
 
 import io.ballerina.stdlib.data.yaml.lexer.LexerState;
 import io.ballerina.stdlib.data.yaml.lexer.Token;
+import io.ballerina.stdlib.data.yaml.utils.Error;
 
 import java.util.List;
 
@@ -14,9 +15,10 @@ public class Directive {
      *
      * @param state - Current parser state
      */
-    public static void yamlDirective(ParserState state) {
+    public static void yamlDirective(ParserState state) throws Error.YamlParserException {
         if (state.getYamlVersion() != null) {
-            throw new RuntimeException("YAML document version is already defined");
+            throw new Error.YamlParserException("YAML document version is already defined",
+                    state.getLine(), state.getColumn());
         }
 
         // Expects a separate in line.
@@ -34,7 +36,8 @@ public class Directive {
         float yamlVersion = Float.parseFloat(lexemeBuffer);
         if (yamlVersion != 1.2) {
             if (yamlVersion >= 2.0 || yamlVersion < 1.0) {
-                throw new RuntimeException("Incompatible yaml version for the 1.2 parser");
+                throw new Error.YamlParserException("incompatible yaml version for the 1.2 parser",
+                        state.getLine(), state.getColumn());
             }
         }
         state.setYamlVersion(yamlVersion);
@@ -46,7 +49,7 @@ public class Directive {
      *
      * @param state - Current parser state
      */
-    public static void tagDirective(ParserState state) {
+    public static void tagDirective(ParserState state) throws Error.YamlParserException {
         YamlParser.getNextToken(state, List.of(Token.TokenType.SEPARATION_IN_LINE));
 
         // Expect a tag handle
@@ -57,7 +60,7 @@ public class Directive {
 
         // Tag handles cannot be redefined
         if (state.getCustomTagHandles().containsKey(tagHandle)) {
-            throw new RuntimeException("Duplicate tag handle");
+            throw new Error.YamlParserException("duplicate tag handle", state.getLine(), state.getColumn());
         }
 
         state.updateLexerState(LexerState.LEXER_TAG_PREFIX_STATE);
@@ -73,7 +76,7 @@ public class Directive {
      *
      * @param state - Current parser state
      */
-    public static void reservedDirective(ParserState state) {
+    public static void reservedDirective(ParserState state) throws Error.YamlParserException {
         StringBuilder reservedDirective = new StringBuilder(state.getCurrentToken().getValue());
         state.updateLexerState(LexerState.LEXER_RESERVED_DIRECTIVE);
 

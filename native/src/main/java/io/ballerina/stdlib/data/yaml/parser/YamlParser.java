@@ -22,6 +22,7 @@ import io.ballerina.stdlib.data.yaml.lexer.Token;
 import io.ballerina.stdlib.data.yaml.lexer.YamlLexer;
 import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
 import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
+import io.ballerina.stdlib.data.yaml.utils.Error;
 import io.ballerina.stdlib.data.yaml.utils.JsonTraverse;
 
 import java.io.Reader;
@@ -96,6 +97,14 @@ public class YamlParser {
 
         public ComposerState(ParserState parserState) {
             this.parserState = parserState;
+        }
+
+        public int getLine() {
+            return parserState.getLine();
+        }
+
+        public int getColumn() {
+            return parserState.getColumn();
         }
 
         private void updateIndexOfArrayElement() {
@@ -267,10 +276,15 @@ public class YamlParser {
     public static Object parse(Reader reader, Type expectedType) throws BError {
         ComposerState composerState = new ComposerState(new ParserState(reader, expectedType));
         composerState.handleExpectedType(expectedType);
-        return parseDocument(composerState);
+        try {
+            return parseDocument(composerState);
+        } catch (Error.YamlParserException e) {
+             return DiagnosticLog.error(DiagnosticErrorCode.YAML_PARSER_EXCEPTION,
+                     e.getMessage(), e.getLine(), e.getColumn());
+        }
     }
 
-    private static Object parseDocument(ComposerState state) {
+    private static Object parseDocument(ComposerState state) throws Error.YamlParserException {
 
         ParserEvent event = parse(state.parserState);
 
@@ -295,7 +309,8 @@ public class YamlParser {
         return output;
     }
 
-    private static Object handleEvent(ComposerState state, ParserEvent event, boolean mapOrSequenceScalar) {
+    private static Object handleEvent(ComposerState state, ParserEvent event, boolean mapOrSequenceScalar)
+            throws Error.YamlParserException {
         // Check for aliases
         ParserEvent.EventKind eventKind = event.getKind();
 
@@ -303,7 +318,7 @@ public class YamlParser {
             ParserEvent.AliasEvent aliasEvent = (ParserEvent.AliasEvent) event;
             String alias = state.anchorBuffer.get(aliasEvent.getAlias());
             if (alias == null) {
-                throw new RuntimeException("The anchor does not exist");
+                throw new Error.YamlParserException("anchor does not exist", state.getLine(), state.getColumn());
             }
             return alias;
         }
@@ -334,7 +349,8 @@ public class YamlParser {
                             Types.FailSafeSchema.MAPPING, event.getTag());
                 }
                 default -> {
-                    throw new RuntimeException("Only sequence and mapping are allowed as node start events");
+                    throw new Error.YamlParserException("only sequence and mapping are allowed as node start events",
+                            state.getLine(), state.getColumn());
                 }
             }
             checkAnchor(state, event, output.toString());
@@ -366,7 +382,8 @@ public class YamlParser {
         state.currentYamlNode = Values.convertAndUpdateCurrentValueNode(state, value, expType);
     }
 
-    public static Object composeSequence(YamlParser.ComposerState state, boolean flowStyle) {
+    public static Object composeSequence(YamlParser.ComposerState state, boolean flowStyle)
+            throws Error.YamlParserException {
         boolean firstElement = true;
         if (!state.rootValueInitialized) {
             state.currentYamlNode = Values.initRootArrayValue(state);
@@ -386,20 +403,21 @@ public class YamlParser {
                 if (!flowStyle) {
                     break;
                 }
-                throw new RuntimeException("Unexpected event");
+                throw new Error.YamlParserException("unexpected event", state.getLine(), state.getColumn());
             }
 
             if (event.getKind() == ParserEvent.EventKind.END_EVENT) {
                 ParserEvent.EndEvent endEvent = (ParserEvent.EndEvent) event;
 
                 switch (endEvent.getEndType()) {
-                    case MAPPING -> throw new RuntimeException("Unexpected event");
+                    case MAPPING -> throw new Error.YamlParserException("unexpected event",
+                            state.getLine(), state.getColumn());
                     case STREAM -> {
                         if (!flowStyle) {
                             terminated = true;
                             break;
                         }
-                        throw new RuntimeException("Unexpected event");
+                        throw new Error.YamlParserException("unexpected event", state.getLine(), state.getColumn());
                     }
                     case SEQUENCE -> {
                         terminated = true;
@@ -425,7 +443,8 @@ public class YamlParser {
         return (sequence.size() == 0 && !flowStyle) ? Collections.singletonList(null) : sequence;
     }
 
-    public static Object composeMapping(ComposerState state, boolean flowStyle, boolean implicitMapping) {
+    public static Object composeMapping(ComposerState state, boolean flowStyle, boolean implicitMapping)
+            throws Error.YamlParserException {
         boolean isParentSequence = false;
         if (!state.rootValueInitialized) {
             state.currentYamlNode = Values.initRootMapValue(state);
@@ -446,20 +465,21 @@ public class YamlParser {
                 if (!flowStyle) {
                     break;
                 }
-                throw new RuntimeException("Unexpected event");
+                throw new Error.YamlParserException("unexpected event", state.getLine(), state.getColumn());
             }
 
             if (event.getKind() == ParserEvent.EventKind.END_EVENT) {
                 ParserEvent.EndEvent endEvent = (ParserEvent.EndEvent) event;
                 switch (endEvent.getEndType()) {
                     case MAPPING -> terminated = true;
-                    case SEQUENCE -> throw new RuntimeException("Unexpected event");
+                    case SEQUENCE -> throw new Error.YamlParserException("unexpected event",
+                            state.getLine(), state.getColumn());
                     default -> {
                         if (!flowStyle) {
                             terminated = true;
                             break;
                         }
-                        throw new RuntimeException("Unexpected event");
+                        throw new Error.YamlParserException("unexpected event", state.getLine(), state.getColumn());
                     }
                 }
                 if (terminated) {
@@ -470,14 +490,16 @@ public class YamlParser {
             // Cannot have a nested block mapping if a value is assigned
             if (event.getKind() == ParserEvent.EventKind.START_EVENT
                     && !((ParserEvent.StartEvent) event).isFlowStyle()) {
-                throw new RuntimeException("Cannot have nested mapping under a key-pair that is already assigned");
+                throw new Error.YamlParserException("cannot have nested mapping under " +
+                        "a key-pair that is already assigned", state.getLine(), state.getColumn());
             }
 
             // Compose the key
             String key = (String) handleEvent(state, event, true);
 
             if (!state.allowMapEntryRedefinition && structure.containsKey(key.toString())) {
-                throw new RuntimeException("Cannot have duplicate map entries for '${key.toString()}");
+                throw new Error.YamlParserException("cannot have duplicate map entries for '${key.toString()}",
+                        state.getLine(), state.getColumn());
             }
             Values.handleFieldName(key, state);
 
@@ -492,14 +514,16 @@ public class YamlParser {
                         structure.put(key, null);
                         terminated = true;
                     }
-                    case SEQUENCE -> throw new RuntimeException("Unexpected event error");
+                    case SEQUENCE -> throw new Error.YamlParserException("unexpected event error",
+                            state.getLine(), state.getColumn());
                     default -> {
                         if (!flowStyle) {
                             structure.put(key, null);
                             terminated = true;
                             break;
                         }
-                        throw new RuntimeException("Unexpected event error");
+                        throw new Error.YamlParserException("unexpected event error",
+                                state.getLine(), state.getColumn());
                     }
                 }
                 if (terminated) {
@@ -553,16 +577,18 @@ public class YamlParser {
      * @param event - The event representing the alias name
      * @param assignedValue - Anchored value to the alias
      */
-    public static void checkAnchor(ComposerState state, ParserEvent event, String assignedValue) {
+    public static void checkAnchor(ComposerState state, ParserEvent event, String assignedValue)
+            throws Error.YamlParserException {
         if (event.getAnchor() != null) {
             if (state.anchorBuffer.containsKey(event.getAnchor()) && !state.allowAnchorRedefinition) {
-                throw new RuntimeException("Duplicate anchor definition");
+                throw new Error.YamlParserException("duplicate anchor definition", state.getLine(), state.getColumn());
             }
             state.anchorBuffer.put(event.getAnchor(), assignedValue);
         }
     }
 
-    public static Object castData(ComposerState state, Object data, Types.FailSafeSchema kind, String tag)  {
+    public static Object castData(ComposerState state, Object data, Types.FailSafeSchema kind, String tag)
+            throws Error.YamlParserException {
         // Check for explicit keys
         if (tag != null) {
             // Check for the tags in the YAML failsafe schema
@@ -570,24 +596,24 @@ public class YamlParser {
                 if (kind == Types.FailSafeSchema.STRING) {
                     return data.toString();
                 }
-                throw new RuntimeException("Unexpected kind error");
+                throw new Error.YamlParserException("unexpected kind error", state.getLine(), state.getColumn());
             }
 
             if (tag.equals(DEFAULT_GLOBAL_TAG_HANDLE + "seq")) {
                 if (kind == Types.FailSafeSchema.SEQUENCE) {
                     return data;
                 }
-                throw new RuntimeException("Unexpected kind error");
+                throw new Error.YamlParserException("unexpected kind error", state.getLine(), state.getColumn());
             }
 
             if (tag.equals(DEFAULT_GLOBAL_TAG_HANDLE + "map")) {
                 if (kind == Types.FailSafeSchema.MAPPING) {
                     return data;
                 }
-                throw new RuntimeException("Unexpected kind error");
+                throw new Error.YamlParserException("unexpected kind error", state.getLine(), state.getColumn());
             }
 
-            throw new RuntimeException("tag schema not supported");
+            throw new Error.YamlParserException("tag schema not supported", state.getLine(), state.getColumn());
         }
 
         // Return as a type of the YAML failsafe schema.
@@ -601,7 +627,7 @@ public class YamlParser {
      * @param state - Current parser state
      * @return - Parsed event
      */
-    private static ParserEvent parse(ParserState state) {
+    private static ParserEvent parse(ParserState state) throws Error.YamlParserException {
         return parse(state, ParserUtils.ParserOption.DEFAULT, BARE_DOCUMENT);
     }
 
@@ -612,7 +638,8 @@ public class YamlParser {
      * @param docType - Document type to be parsed
      * @return - Parsed event
      */
-    private static ParserEvent parse(ParserState state, ParserUtils.DocumentType docType) {
+    private static ParserEvent parse(ParserState state, ParserUtils.DocumentType docType)
+            throws Error.YamlParserException {
         return parse(state, ParserUtils.ParserOption.DEFAULT, docType);
     }
 
@@ -623,7 +650,8 @@ public class YamlParser {
      * @param option - Expected values inside a mapping collection
      * @return - Parsed event
      */
-    private static ParserEvent parse(ParserState state, ParserUtils.ParserOption option) {
+    private static ParserEvent parse(ParserState state, ParserUtils.ParserOption option)
+            throws Error.YamlParserException {
         return parse(state, option, BARE_DOCUMENT);
     }
 
@@ -636,7 +664,7 @@ public class YamlParser {
      * @return - Parsed event
      */
     private static ParserEvent parse(ParserState state, ParserUtils.ParserOption option,
-                                     ParserUtils.DocumentType docType) {
+                                     ParserUtils.DocumentType docType) throws Error.YamlParserException {
         // Empty the event buffer before getting new tokens
         final List<ParserEvent> eventBuffer = state.getEventBuffer();
 
@@ -659,23 +687,19 @@ public class YamlParser {
             if ((!lexerState.isNewLine() && state.getLineIndex() >= state.getNumLines() - 1)
                 || (lexerState.isNewLine() && lexerState.isEndOfStream()))  {
                 if (docType == DIRECTIVE_DOCUMENT) {
-                    throw new RuntimeException("Invalid document");
+                    throw new Error.YamlParserException("invalid document", state.getLine(), state.getColumn());
                 }
                 return new ParserEvent.EndEvent(Collection.STREAM);
             }
-            try {
-                state.initLexer();
-            } catch (Exception ex) {
-                throw new RuntimeException(ex);
-            }
-
+            state.initLexer();
             return parse(state, option, docType);
         }
 
         // Only directive tokens are allowed in directive document
         if (currentTokenType != DIRECTIVE && currentTokenType != DIRECTIVE_MARKER) {
             if (docType == DIRECTIVE_DOCUMENT) {
-                throw new RuntimeException("'${state.currentToken.token}' is not allowed in a directive document");
+                throw new Error.YamlParserException("'${state.currentToken.token}' " +
+                        "is not allowed in a directive document", state.getLine(), state.getColumn());
             }
             state.setDirectiveDocument(false);
         }
@@ -684,7 +708,8 @@ public class YamlParser {
             case DIRECTIVE -> {
                 // Directives are not allowed in bare documents
                 if (docType == BARE_DOCUMENT) {
-                    throw new RuntimeException("Directives are not allowed in a bare document");
+                    throw new Error.YamlParserException("directives are not allowed in a bare document",
+                            state.getLine(), state.getColumn());
                 }
 
                 switch (state.getCurrentToken().getValue()) {
@@ -717,15 +742,15 @@ public class YamlParser {
 
                     // There cannot be nodes next to the document marker.
                     if (bufferedTokenType != EOL && bufferedTokenType != COMMENT && !explicit) {
-                        throw new RuntimeException("'${state.tokenBuffer.token}' token cannot " +
-                                "start in the same line as the document marker");
+                        throw new Error.YamlParserException("'${state.tokenBuffer.token}' token cannot " +
+                                "start in the same line as the document marker", state.getLine(), state.getColumn());
                     }
 
                     // Block collection nodes cannot be next to the directive marker.
                     if (explicit && (bufferedTokenType == PLANAR_CHAR && bufferedToken.getIndentation() != null
                             || bufferedTokenType == SEQUENCE_ENTRY)) {
-                        throw new RuntimeException("'${state.tokenBuffer.token}' token cannot start " +
-                                "in the same line as the directive marker");
+                        throw new Error.YamlParserException("'${state.tokenBuffer.token}' token cannot start " +
+                                "in the same line as the directive marker", state.getLine(), state.getColumn());
                     }
                 }
                 return new ParserEvent.DocumentMarkerEvent(explicit);
@@ -779,10 +804,12 @@ public class YamlParser {
             }
             case SEQUENCE_ENTRY -> {
                 if (state.getLexerState().isFlowCollection()) {
-                    throw new RuntimeException("Cannot have block sequence under flow collection");
+                    throw new Error.YamlParserException("cannot have block sequence under flow collection",
+                            state.getLine(), state.getColumn());
                 }
                 if (state.isExpectBlockSequenceValue()) {
-                    throw new RuntimeException("Cannot have nested sequence for a defined value");
+                    throw new Error.YamlParserException("cannot have nested sequence for a defined value",
+                            state.getLine(), state.getColumn());
                 }
 
                 switch (state.getCurrentToken().getIndentation().getChange()) {
@@ -818,7 +845,8 @@ public class YamlParser {
                     if (bufferedTokenType == SEPARATOR) {
                         getNextToken(state);
                     } else if (bufferedTokenType != MAPPING_END && bufferedTokenType != SEQUENCE_END) {
-                        throw new RuntimeException("Unexpected token error");
+                        throw new Error.YamlParserException("unexpected token error",
+                                state.getLine(), state.getColumn());
                     }
                 }
                 return new ParserEvent.EndEvent(SEQUENCE);
@@ -834,7 +862,8 @@ public class YamlParser {
                     if (bufferedTokenType == SEPARATOR) {
                         getNextToken(state);
                     } else if (bufferedTokenType != MAPPING_END && bufferedTokenType != SEQUENCE_END) {
-                        throw new RuntimeException("Unexpected token error");
+                        throw new Error.YamlParserException("unexpected token error",
+                                state.getLine(), state.getColumn());
                     }
                 }
                 return new ParserEvent.EndEvent(Collection.MAPPING);
@@ -845,14 +874,15 @@ public class YamlParser {
             }
         }
 
-        throw new RuntimeException("`Invalid token '${state.currentToken.token}' as the first for generating an event");
+        throw new Error.YamlParserException("`Invalid token '${state.currentToken.token}' " +
+                "as the first for generating an event", state.getLine(), state.getColumn());
     }
 
     /** Verifies the grammar production for separation between nodes.
      *
      * @param state - Current parser state
      */
-    private static void separate(ParserState state) {
+    private static void separate(ParserState state) throws Error.YamlParserException {
         state.updateLexerState(LexerState.LEXER_START_STATE);
         getNextToken(state, true);
 
@@ -907,12 +937,13 @@ public class YamlParser {
         }
     }
 
-    private static ParserEvent nodeComplete(ParserState state, ParserUtils.ParserOption option) {
+    private static ParserEvent nodeComplete(ParserState state, ParserUtils.ParserOption option)
+            throws Error.YamlParserException {
         return nodeComplete(state, option, new TagStructure());
     }
 
     private static ParserEvent nodeComplete(ParserState state, ParserUtils.ParserOption option,
-                                            TagStructure definedProperties) {
+                                            TagStructure definedProperties) throws Error.YamlParserException {
         TagStructure tagStructure = new TagStructure();
         state.setTagPropertiesInLine(true);
 
@@ -962,7 +993,7 @@ public class YamlParser {
         return appendData(state, option, false, tagStructure, definedProperties);
     }
 
-    private static TagDetails nodeTag(ParserState state) {
+    private static TagDetails nodeTag(ParserState state) throws Error.YamlParserException {
         String tagPrefix = null;
         String tagHandle = null;
         switch (state.getBufferedToken().getType()) {
@@ -988,7 +1019,7 @@ public class YamlParser {
     }
 
 
-    private static String nodeAnchor(ParserState state) {
+    private static String nodeAnchor(ParserState state) throws Error.YamlParserException {
         String anchor = null;
         if (state.getBufferedToken().getType() == ANCHOR) {
             getNextToken(state);
@@ -1005,7 +1036,8 @@ public class YamlParser {
      * @param tagPrefix - Tag prefix of the event
      * @return - The complete tag name of the event
      */
-    private static String generateCompleteTagName(ParserState state, String tagHandle, String tagPrefix) {
+    private static String generateCompleteTagName(ParserState state, String tagHandle, String tagPrefix)
+            throws Error.YamlParserException {
         String tagHandleName;
         // Check if the tag handle is defined in the custom tags.
         if (state.getCustomTagHandles().containsKey(tagHandle)) {
@@ -1014,7 +1046,7 @@ public class YamlParser {
             if (DEFAULT_TAG_HANDLES.containsKey(tagHandle)) {
                 tagHandleName = DEFAULT_TAG_HANDLES.get(tagHandle);
             } else {
-                throw new RuntimeException("tag handle is not defined");
+                throw new Error.YamlParserException("tag handle is not defined", state.getLine(), state.getColumn());
             }
         }
         return tagHandleName + tagPrefix;
@@ -1027,11 +1059,13 @@ public class YamlParser {
      * @param option - Selected parser option
      * @return - The constructed scalar or start event
      */
-    private static ParserEvent appendData(ParserState state, ParserUtils.ParserOption option) {
+    private static ParserEvent appendData(ParserState state, ParserUtils.ParserOption option)
+            throws Error.YamlParserException {
         return appendData(state, option, false, new TagStructure(), null);
     }
 
-    private static ParserEvent appendData(ParserState state, ParserUtils.ParserOption option, boolean peeked) {
+    private static ParserEvent appendData(ParserState state, ParserUtils.ParserOption option, boolean peeked)
+            throws Error.YamlParserException {
         return appendData(state, option, peeked, new TagStructure(), null);
     }
 
@@ -1046,7 +1080,8 @@ public class YamlParser {
      * @return - The constructed scalar or start event
      */
     private static ParserEvent appendData(ParserState state, ParserUtils.ParserOption option, boolean peeked,
-                                          TagStructure tagStructure, TagStructure definedProperties) {
+                                          TagStructure tagStructure, TagStructure definedProperties)
+            throws Error.YamlParserException {
 
         state.setExpectBlockSequenceValue(true);
         ParserEvent buffer = null;
@@ -1075,7 +1110,8 @@ public class YamlParser {
 
         if (state.getLastExplicitKeyLine() == state.getLineIndex() && !state.getLexerState().isFlowCollection()
                 && option == EXPECT_MAP_KEY) {
-            throw new RuntimeException("Cannot have a scalar next to a block key-value pair");
+            throw new Error.YamlParserException("cannot have a scalar next to a block key-value pair",
+                    state.getLine(), state.getColumn());
         }
 
         ParserEvent event = content(state, peeked, state.isExplicitKey(), tagStructure);
@@ -1098,14 +1134,16 @@ public class YamlParser {
                     switch (indentation.getTokens().get(0)) {
                         case ANCHOR -> {
                             if (isAlias && tagStructure.anchor != null) {
-                                throw new RuntimeException("An alias node cannot have an anchor");
+                                throw new Error.YamlParserException("an alias node cannot have an anchor",
+                                        state.getLine(), state.getColumn());
                             }
                             newNodeTagStructure.tag = tagStructure.tag;
                             currentNodeTagStructure.anchor = tagStructure.anchor;
                         }
                         case TAG -> {
                             if (isAlias && tagStructure.tag != null) {
-                                throw new RuntimeException("An alias node cannot have a tag");
+                                throw new Error.YamlParserException("an alias node cannot have a tag",
+                                        state.getLine(), state.getColumn());
                             }
                             newNodeTagStructure.anchor = tagStructure.anchor;
                             currentNodeTagStructure.tag = tagStructure.tag;
@@ -1114,14 +1152,16 @@ public class YamlParser {
                 }
                 case 2 -> {
                     if (isAlias && (tagStructure.anchor != null || tagStructure.tag != null)) {
-                        throw new RuntimeException("An alias node cannot have tag properties");
+                        throw new Error.YamlParserException("an alias node cannot have tag properties",
+                                state.getLine(), state.getColumn());
                     }
                     currentNodeTagStructure = tagStructure;
                 }
             }
         } else {
             if (isAlias && (tagStructure.anchor != null || tagStructure.tag != null)) {
-                throw new RuntimeException("An alias node cannot have tag properties");
+                throw new Error.YamlParserException("an alias node cannot have tag properties",
+                        state.getLine(), state.getColumn());
             }
             currentNodeTagStructure = tagStructure;
         }
@@ -1147,7 +1187,8 @@ public class YamlParser {
         // If there are no whitespace, and the current token is ","
         if (state.getCurrentToken().getType() == SEPARATOR) {
             if (!state.getLexerState().isFlowCollection()) {
-                throw new RuntimeException("',' are only allowed in flow collections");
+                throw new Error.YamlParserException("',' are only allowed in flow collections",
+                        state.getLine(), state.getColumn());
             }
             separate(state);
             if (option == EXPECT_MAP_KEY) {
@@ -1156,20 +1197,22 @@ public class YamlParser {
         } else if (state.getCurrentToken().getType() == MAPPING_VALUE) {
             // If there are no whitespace, and the current token is ':'
             if (state.getLastKeyLine() == state.getLineIndex() && !state.getLexerState().isFlowCollection()) {
-                throw new RuntimeException("Two block mapping keys cannot be defined in the same line");
+                throw new Error.YamlParserException("two block mapping keys cannot be defined in the same line",
+                        state.getLine(), state.getColumn());
             }
 
             // In a block scalar, if there is a mapping key as in the same line as a mapping value,
             // then that mapping value does not correspond to the mapping key. the mapping value forms a
             // new mapping pair which represents the explicit key.
             if (state.getLastExplicitKeyLine() == state.getLineIndex() && !state.getLexerState().isFlowCollection()) {
-                throw new RuntimeException("Mappings are not allowed as keys for explicit keys");
+                throw new Error.YamlParserException("mappings are not allowed as keys for explicit keys",
+                        state.getLine(), state.getColumn());
             }
             state.setLastKeyLine(state.getLineIndex());
 
             if (state.isExplicitDoc()) {
-                throw new RuntimeException("'${lexer:PLANAR_CHAR}' token cannot " +
-                        "start in the same line as the directive marker");
+                throw new Error.YamlParserException("'${lexer:PLANAR_CHAR}' token cannot " +
+                        "start in the same line as the directive marker", state.getLine(), state.getColumn());
             }
 
             separate(state);
@@ -1186,15 +1229,18 @@ public class YamlParser {
             // There is already tag properties defined and the value is not a key
             if (definedProperties != null) {
                 if (definedProperties.anchor != null && tagStructure.anchor != null) {
-                    throw new RuntimeException("Only one anchor is allowed for a node");
+                    throw new Error.YamlParserException("only one anchor is allowed for a node",
+                            state.getLine(), state.getColumn());
                 }
                 if (definedProperties.tag != null && tagStructure.tag != null) {
-                    throw new RuntimeException("Only one tag is allowed for a node");
+                    throw new Error.YamlParserException("only one tag is allowed for a node",
+                            state.getLine(), state.getColumn());
                 }
             }
 
             if (option == EXPECT_MAP_KEY && !explicitKey) {
-                throw new RuntimeException("Expected a key for the block mapping");
+                throw new Error.YamlParserException("expected a key for the block mapping",
+                        state.getLine(), state.getColumn());
             }
 
             if (explicitKey) {
@@ -1202,7 +1248,7 @@ public class YamlParser {
                 if (peekedIndentation != null
                         && peekedIndentation.getChange() == Indentation.IndentationChange.INDENT_INCREASE
                         && state.getBufferedToken().getType() != MAPPING_KEY) {
-                    throw new RuntimeException("Invalid explicit key");
+                    throw new Error.YamlParserException("invalid explicit key", state.getLine(), state.getColumn());
                 }
             }
         }
@@ -1268,7 +1314,7 @@ public class YamlParser {
      * @return Parser Event
      */
     private static ParserEvent content(ParserState state, boolean peeked, boolean explicitKey,
-                                       TagStructure tagStructure) {
+                                       TagStructure tagStructure) throws Error.YamlParserException {
         if (!peeked) {
             separate(state);
             getNextToken(state);
@@ -1298,7 +1344,8 @@ public class YamlParser {
             }
             case SEQUENCE_ENTRY -> {
                 if (state.isTagPropertiesInLine()) {
-                   throw new RuntimeException("'-' cannot be defined after tag properties");
+                    throw new Error.YamlParserException("'-' cannot be defined after tag properties",
+                            state.getLine(), state.getColumn());
                 }
 
                 switch (state.getCurrentToken().getIndentation().getChange()) {
@@ -1322,7 +1369,8 @@ public class YamlParser {
             }
             case LITERAL, FOLDED -> {
                 if (state.getLexerState().isFlowCollection()) {
-                    throw new RuntimeException("Cannot have a block node inside a flow node");
+                    throw new Error.YamlParserException("cannot have a block node inside a flow node",
+                            state.getLine(), state.getColumn());
                 }
                 String value = blockScalar(state, state.getCurrentToken().getType() == FOLDED);
                 checkEmptyKey(state);
@@ -1364,7 +1412,7 @@ public class YamlParser {
      * @param isFolded - If set, then the parses folded block scalar. Else, parses literal block scalar.
      * @return - Parsed block scalar value
      */
-    private static String blockScalar(ParserState state, boolean isFolded) {
+    private static String blockScalar(ParserState state, boolean isFolded) throws Error.YamlParserException {
         String chompingIndicator = "";
         state.getLexerState().updateLexerState(LexerState.LEXER_BLOCK_HEADER);
         getNextToken(state);
@@ -1376,20 +1424,11 @@ public class YamlParser {
                 getNextToken(state, List.of(EOL));
 
                 if (state.getLexerState().isEndOfStream()) {
-                    try {
-                        state.initLexer();
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
-
+                    state.initLexer();
                 }
             }
             case EOL -> { // Clip chomping indicator
-                try {
-                    state.initLexer();
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
+                state.initLexer();
                 chompingIndicator = "=";
             }
         }
@@ -1429,11 +1468,7 @@ public class YamlParser {
                         terminated = true;
                         break;
                     }
-                    try {
-                        state.initLexer();
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    state.initLexer();
                 }
                 case EMPTY_LINE -> {
                     if (!isFirstLine) {
@@ -1443,11 +1478,7 @@ public class YamlParser {
                         terminated = true;
                         break;
                     }
-                    try {
-                        state.initLexer();
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    state.initLexer();
                     onlyEmptyLine = isFirstLine;
                     isFirstLine = false;
                 }
@@ -1460,11 +1491,7 @@ public class YamlParser {
                         terminated = true;
                         break;
                     }
-                    try {
-                        state.initLexer();
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    state.initLexer();
                     getNextToken(state);
                     getNextToken(state, true);
 
@@ -1475,11 +1502,7 @@ public class YamlParser {
                         if (state.getLineIndex() == state.getNumLines() - 1) {
                             break;
                         }
-                        try {
-                            state.initLexer();
-                        } catch (Exception ex) {
-                            throw new RuntimeException(ex);
-                        }
+                        state.initLexer();
                         getNextToken(state);
                         getNextToken(state, true);
                         bufferedTokenType = state.getBufferedToken().getType();
@@ -1521,7 +1544,7 @@ public class YamlParser {
      * @param state - Current parser state.
      * @return - Parsed planar scalar value
      */
-    private static String planarScalar(ParserState state) {
+    private static String planarScalar(ParserState state) throws Error.YamlParserException {
         return planarScalar(state, true);
     }
 
@@ -1532,7 +1555,8 @@ public class YamlParser {
      * @param allowTokensAsPlanar - If set, then the restricted tokens are allowed as a planar scalar
      * @return - Parsed planar scalar value
      */
-    private static String planarScalar(ParserState state, boolean allowTokensAsPlanar) {
+    private static String planarScalar(ParserState state, boolean allowTokensAsPlanar)
+            throws Error.YamlParserException {
         // Process the first planar char
         StringBuilder lexemeBuffer = new StringBuilder(state.getCurrentToken().getValue());
         boolean isFirstLine = true;
@@ -1569,11 +1593,7 @@ public class YamlParser {
                         terminate = true;
                         break;
                     }
-                    try {
-                        state.initLexer();
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    state.initLexer();
 
                     isFirstLine = false;
                 }
@@ -1589,11 +1609,7 @@ public class YamlParser {
                         terminate = true;
                         break;
                     }
-                    try {
-                        state.initLexer();
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    state.initLexer();
                 }
                 case SEPARATION_IN_LINE -> {
                     getNextToken(state);
@@ -1625,7 +1641,7 @@ public class YamlParser {
      * @param state - Current parser state
      * @return - Parsed double-quoted scalar value
      */
-    private static String doubleQuoteScalar(ParserState state) {
+    private static String doubleQuoteScalar(ParserState state) throws Error.YamlParserException {
         state.getLexerState().updateLexerState(LexerState.LEXER_DOUBLE_QUOTE);
         String lexemeBuffer = "";
         state.getLexerState().setFirstLine(true);
@@ -1667,11 +1683,7 @@ public class YamlParser {
                     }
 
                     state.getLexerState().setFirstLine(false);
-                    try {
-                        state.initLexer();
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    state.initLexer();
 
                     // Add a whitespace if the delimiter is on a new line
                     getNextToken(state, true);
@@ -1687,11 +1699,7 @@ public class YamlParser {
                         lexemeBuffer += "\n";
                     }
                     emptyLine = true;
-                    try {
-                        state.initLexer();
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    state.initLexer();
 
                     boolean firstLineBuffer = state.getLexerState().isFirstLine();
                     state.getLexerState().setFirstLine(false);
@@ -1703,7 +1711,8 @@ public class YamlParser {
                     state.getLexerState().setFirstLine(false);
                 }
                 default -> {
-                    throw new RuntimeException("Invalid double quote scalar");
+                    throw new Error.YamlParserException("invalid double quote scalar",
+                            state.getLine(), state.getColumn());
                 }
             }
             getNextToken(state);
@@ -1714,7 +1723,7 @@ public class YamlParser {
         return lexemeBuffer;
     }
 
-    private static void checkEmptyKey(ParserState state) {
+    private static void checkEmptyKey(ParserState state) throws Error.YamlParserException {
         separate(state);
         getNextToken(state, true);
 
@@ -1745,7 +1754,7 @@ public class YamlParser {
      * @param state - Current parser state
      * @return - Parsed single-quoted scalar value
      */
-    private static String singleQuoteScalar(ParserState state) {
+    private static String singleQuoteScalar(ParserState state) throws Error.YamlParserException {
         state.getLexerState().updateLexerState(LexerState.LEXER_SINGLE_QUOTE);
         String lexemeBuffer = "";
         state.getLexerState().setFirstLine(true);
@@ -1772,11 +1781,8 @@ public class YamlParser {
                     // Trim trailing white spaces
                     lexemeBuffer = trimTailWhitespace(lexemeBuffer);
                     state.getLexerState().setFirstLine(false);
-                    try {
-                        state.initLexer();
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    state.initLexer();
+
 
                     // Add a whitespace if the delimiter is on a new line
                     getNextToken(state, true);
@@ -1790,11 +1796,8 @@ public class YamlParser {
                         lexemeBuffer += "\n";
                     }
                     emptyLine = true;
-                    try {
-                        state.initLexer();
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
+                    state.initLexer();
+
 
                     boolean firstLineBuffer = state.getLexerState().isFirstLine();
                     state.getLexerState().setFirstLine(false);
@@ -1806,7 +1809,8 @@ public class YamlParser {
                     state.getLexerState().setFirstLine(false);
                 }
                 default -> {
-                    throw new RuntimeException("Invalid single quote character");
+                    throw new Error.YamlParserException("invalid single quote character",
+                            state.getLine(), state.getColumn());
                 }
             }
             getNextToken(state);
@@ -1852,7 +1856,7 @@ public class YamlParser {
      * @param state - Current parser state
      * @param isSingleLine - If the scalar only spanned for one line
      */
-    private static void verifyKey(ParserState state, boolean isSingleLine) {
+    private static void verifyKey(ParserState state, boolean isSingleLine) throws Error.YamlParserException {
         // Explicit keys can span multiple lines.
         if (state.isExplicitKey()) {
             return;
@@ -1862,7 +1866,8 @@ public class YamlParser {
         state.getLexerState().updateLexerState(LexerState.LEXER_START_STATE);
         getNextToken(state, true);
         if (state.getBufferedToken().getType() == MAPPING_VALUE && !isSingleLine) {
-            throw new RuntimeException("Mapping keys cannot span multiple lines");
+            throw new Error.YamlParserException("mapping keys cannot span multiple lines",
+                    state.getLine(), state.getColumn());
         }
     }
 
@@ -1871,7 +1876,7 @@ public class YamlParser {
      *
      * @param state - Current parser state
      */
-    public static void getNextToken(ParserState state) {
+    public static void getNextToken(ParserState state) throws Error.YamlParserException {
         getNextToken(state, List.of(Token.TokenType.DUMMY));
     }
 
@@ -1881,7 +1886,7 @@ public class YamlParser {
      * @param state - Current parser state
      * @param peek Store the token in the buffer
      */
-    public static void getNextToken(ParserState state, boolean peek) {
+    public static void getNextToken(ParserState state, boolean peek) throws Error.YamlParserException {
         getNextToken(state, List.of(Token.TokenType.DUMMY), peek);
     }
 
@@ -1891,7 +1896,8 @@ public class YamlParser {
      * @param state - Current parser state
      * @param expectedTokens Predicted tokens
      */
-    public static void getNextToken(ParserState state, List<Token.TokenType> expectedTokens) {
+    public static void getNextToken(ParserState state, List<Token.TokenType> expectedTokens)
+            throws Error.YamlParserException {
         getNextToken(state, expectedTokens, false);
     }
 
@@ -1902,7 +1908,8 @@ public class YamlParser {
      * @param expectedTokens Predicted tokens
      * @param peek Store the token in the buffer
      */
-    public static void getNextToken(ParserState state, List<Token.TokenType> expectedTokens, boolean peek) {
+    public static void getNextToken(ParserState state, List<Token.TokenType> expectedTokens, boolean peek)
+            throws Error.YamlParserException {
         Token token;
 
         // Obtain a token form the lexer if there is none in the buffer.
@@ -1928,7 +1935,8 @@ public class YamlParser {
         }
 
         if (!expectedTokens.contains(token.getType())) {
-            throw new RuntimeException("Expected token differ from the actual token");
+            throw new Error.YamlParserException("expected token differ from the actual token",
+                    state.getLine(), state.getColumn());
         }
     }
 

@@ -1,7 +1,7 @@
 package io.ballerina.stdlib.data.yaml.lexer;
 
 import io.ballerina.stdlib.data.yaml.common.Types.Collection;
-
+import io.ballerina.stdlib.data.yaml.utils.Error;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,7 +13,7 @@ public class IndentUtils {
      *
      * @param lexerState - Current lexer state
      */
-    public static void assertIndent(LexerState lexerState) {
+    public static void assertIndent(LexerState lexerState) throws Error.YamlParserException {
         assertIndent(lexerState, 0, false);
     }
 
@@ -22,7 +22,7 @@ public class IndentUtils {
      * @param lexerState - Current lexer state
      * @param offset - Additional white spaces after the parent indent
      */
-    public static void assertIndent(LexerState lexerState, int offset) {
+    public static void assertIndent(LexerState lexerState, int offset) throws Error.YamlParserException {
         assertIndent(lexerState, offset, false);
     }
 
@@ -32,13 +32,14 @@ public class IndentUtils {
      * @param offset - Additional white spaces after the parent indent
      * @param captureIndentationBreak The token is allowed as prefix to a mapping key name
      */
-    public static void assertIndent(LexerState lexerState, int offset, boolean captureIndentationBreak) {
+    public static void assertIndent(LexerState lexerState, int offset, boolean captureIndentationBreak)
+            throws Error.YamlParserException {
         if (lexerState.getColumn() < lexerState.getIndent() + offset) {
             if (captureIndentationBreak) {
                 lexerState.setIndentationBreak(true);
                 return;
             }
-            throw new RuntimeException("Invalid indentation");
+            throw new Error.YamlParserException("invalid indentation", lexerState.getIndent(), lexerState.getColumn());
         }
     }
 
@@ -53,7 +54,8 @@ public class IndentUtils {
      * @param lexerState Current state of the lexer
      * @param outputToken - Planar or anchor key
      */
-    public static void handleMappingValueIndent(LexerState lexerState, Token.TokenType outputToken) {
+    public static void handleMappingValueIndent(LexerState lexerState, Token.TokenType outputToken)
+            throws Error.YamlParserException {
         handleMappingValueIndent(lexerState, outputToken, null);
     }
 
@@ -65,7 +67,7 @@ public class IndentUtils {
      * @param scan - Scanner instance use for scanning
      */
     public static void handleMappingValueIndent(LexerState lexerState, Token.TokenType outputToken,
-                                                Scanner.Scan scan) {
+                                                Scanner.Scan scan) throws Error.YamlParserException {
         lexerState.setIndentationBreak(false);
         boolean enforceMapping = lexerState.getEnforceMapping();
         lexerState.setEnforceMapping(false);
@@ -78,7 +80,7 @@ public class IndentUtils {
         } else {
             try {
                 assertIndent(lexerState, 1);
-            } catch (RuntimeException ex) {
+            } catch (Error.YamlParserException ex) {
                 notSufficientIndent = true;
             }
             lexerState.updateStartIndex();
@@ -102,7 +104,8 @@ public class IndentUtils {
                 return;
             }
 
-            throw new RuntimeException("Insufficient indentation for a scalar");
+            throw new Error.YamlParserException("insufficient indentation for a scalar",
+                    lexerState.getLine(), lexerState.getColumn());
         }
 
         if (lexerState.peek(numWhitespace) == ':' && !lexerState.isFlowCollection()) {
@@ -112,13 +115,14 @@ public class IndentUtils {
         }
 
         if (enforceMapping) {
-            throw new RuntimeException("Insufficient indentation for a scalar");
+            throw new Error.YamlParserException("insufficient indentation for a scalar",
+                    lexerState.getLine(), lexerState.getColumn());
         }
     }
 
     /** Validate the indentation of block collections.
      */
-    public static Indentation handleIndent(LexerState sm, int mapIndex) {
+    public static Indentation handleIndent(LexerState sm, int mapIndex) throws Error.YamlParserException {
         int startIndex = mapIndex == -1 ? sm.getColumn() - 1 : mapIndex;
 
         if (mapIndex != -1) {
@@ -126,7 +130,7 @@ public class IndentUtils {
         }
 
         if (isTabInIndent(sm, startIndex)) {
-            throw new RuntimeException("Cannot have tab as an indentation");
+            throw new Error.YamlParserException("cannot have tab as an indentation", sm.getLine(), sm.getColumn());
         }
 
         Collection collection = mapIndex == -1 ? Collection.SEQUENCE : Collection.MAPPING;
@@ -147,7 +151,8 @@ public class IndentUtils {
                             new ArrayList<>(Collections.singleton(sm.getIndents().pop().getCollection())),
                             sm.getClonedTokensForMappingValue());
                 } else {
-                    throw new RuntimeException("Block mapping cannot have the same indent as a block sequence");
+                    throw new Error.YamlParserException("block mapping cannot have the " +
+                            "same indent as a block sequence", sm.getLine(), sm.getColumn());
                 }
             }
 
@@ -216,6 +221,6 @@ public class IndentUtils {
             }
         }
 
-        throw new RuntimeException("Invalid indentation");
+        throw new Error.YamlParserException("invalid indentation", sm.getLine(), sm.getColumn());
     }
 }

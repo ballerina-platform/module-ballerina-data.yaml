@@ -193,12 +193,16 @@ public class Utils {
     }
 
     public static boolean discernPlanarFromIndicator(LexerState sm) {
+        return discernPlanarFromIndicator(sm, 1);
+    }
+
+    public static boolean discernPlanarFromIndicator(LexerState sm, int offset) {
         if (sm.isFlowCollection()) {
             return matchPattern(sm, List.of(PRINTABLE_PATTERN),
-                    List.of(LINE_BREAK_PATTERN, BOM_PATTERN, WHITE_SPACE_PATTERN, FLOW_INDICATOR_PATTERN), 1);
+                    List.of(LINE_BREAK_PATTERN, BOM_PATTERN, WHITE_SPACE_PATTERN, FLOW_INDICATOR_PATTERN), offset);
         }
         return matchPattern(sm, List.of(PRINTABLE_PATTERN),
-                List.of(LINE_BREAK_PATTERN, BOM_PATTERN, WHITE_SPACE_PATTERN), 1);
+                List.of(LINE_BREAK_PATTERN, BOM_PATTERN, WHITE_SPACE_PATTERN), offset);
     }
 
     public static String getWhitespace(LexerState sm) {

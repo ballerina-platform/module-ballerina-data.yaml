@@ -1,5 +1,7 @@
 package io.ballerina.stdlib.data.yaml.lexer;
 
+import io.ballerina.stdlib.data.yaml.utils.Error;
+
 import static io.ballerina.stdlib.data.yaml.lexer.LexerState.LEXER_DOUBLE_QUOTE;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.EMPTY_LINE;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.TAG;
@@ -14,7 +16,7 @@ public class YamlLexer {
      * @param state Current lexer state
      * @return Updated lexer state is returned
      */
-    public static LexerState.State scanTokens(LexerState state) {
+    public static LexerState.State scanTokens(LexerState state) throws Error.YamlParserException {
         // Check the lexeme buffer for the lexeme stored by the primary tag
         if (state.getLexemeBuffer().length() > 0) {
             state.setLexeme(state.getLexemeBuffer());
@@ -34,7 +36,7 @@ public class YamlLexer {
         // Generate EOL token at the last index
         if (state.isEndOfStream()) {
             if (state.isIndentationBreak()) {
-                throw new RuntimeException("Invalid indentation");
+                throw new Error.YamlParserException("invalid indentation", state.getLine(), state.getColumn());
             }
             if (state.getColumn() == 0) {
                 state.forward();

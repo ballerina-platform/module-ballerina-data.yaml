@@ -1,5 +1,10 @@
 package io.ballerina.stdlib.data.yaml.lexer;
 
+import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
+import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
+import io.ballerina.stdlib.data.yaml.utils.Error;
+
+import java.io.IOException;
 import java.io.Reader;
 import java.util.Arrays;
 
@@ -11,7 +16,7 @@ public class CharacterReader {
     private int remainingBufferedSize = 0;
     private int pointer = 0; // current position in the data buffer
     private boolean eof = false; // flag saying end of the stream reached
-    private int line = 0; // current line number
+    private int line = 1; // current line number
     private int column = 0; // current column number
     private int index = 0; // current index from the beginning of the stream
     private int documentIndex = 0; // current index with in the current document
@@ -100,14 +105,16 @@ public class CharacterReader {
                 if (isPrintable(codePoint)) {
                     i += Character.charCount(codePoint);
                 } else {
-                    throw new RuntimeException("non printable character found");
+                    throw new Error.YamlParserException("non printable character found", line, column);
                 }
             }
             dataBufferSize = cpIndex;
             remainingBufferedSize = dataBufferSize;
             pointer = 0;
-        } catch (Exception ex) {
-            throw new RuntimeException(ex.getMessage());
+        } catch (Error.YamlParserException e) {
+            throw DiagnosticLog.error(DiagnosticErrorCode.YAML_PARSER_EXCEPTION, e.getMessage(), line, column);
+        } catch (IOException e) {
+            throw DiagnosticLog.error(DiagnosticErrorCode.YAML_READER_FAILURE, e.getMessage());
         }
     }
 

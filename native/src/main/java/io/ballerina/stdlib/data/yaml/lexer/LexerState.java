@@ -1,9 +1,12 @@
 package io.ballerina.stdlib.data.yaml.lexer;
 
+import io.ballerina.stdlib.data.yaml.utils.Error;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
+import static io.ballerina.stdlib.data.yaml.lexer.Scanner.COMMENT_SCANNER;
 import static io.ballerina.stdlib.data.yaml.lexer.Scanner.VERBATIM_URI_SCANNER;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.ALIAS;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.ANCHOR;
@@ -300,6 +303,10 @@ public class LexerState {
         this.eofStream = eofStream;
     }
 
+    public int getLine() {
+        return characterReader.getLine();
+    }
+
     public void updateNewLineProps() {
         lastEscapedChar = -1;
         indentStartIndex = -1;
@@ -310,7 +317,7 @@ public class LexerState {
     }
 
     public interface State {
-        State transition(LexerState lexerState);
+        State transition(LexerState lexerState) throws Error.YamlParserException;
     }
 
     private static class StartState implements State {
@@ -322,7 +329,7 @@ public class LexerState {
          * @return Updated state context
          */
         @Override
-        public State transition(LexerState lexerState) {
+        public State transition(LexerState lexerState) throws Error.YamlParserException {
             boolean isFirstChar = lexerState.getColumn() == 0;
             boolean startsWithWhiteSpace = false;
 
@@ -334,7 +341,8 @@ public class LexerState {
             if (lexerState.isFlowCollection() && isFirstChar && lexerState.peek() != -1) {
                 IndentUtils.assertIndent(lexerState);
                 if (IndentUtils.isTabInIndent(lexerState, lexerState.getIndent())) {
-                     throw new RuntimeException("Cannot have tabs as an indentation");
+                    throw new Error.YamlParserException("cannot have tabs as an indentation",
+                            lexerState.getLine(), lexerState.getColumn());
                 }
             }
 
@@ -346,6 +354,7 @@ public class LexerState {
             }
 
             if (Utils.isComment(lexerState)) {
+                Scanner.iterate(lexerState, COMMENT_SCANNER, COMMENT);
                 lexerState.tokenize(COMMENT);
                 return this;
             }
@@ -421,7 +430,8 @@ public class LexerState {
                             lexerState.forward(2);
 
                             if (lexerState.peek() == '!' && lexerState.peek(1) == '>') {
-                                throw new RuntimeException("'verbatim tag' is not resolved. Hence, '!' is invalid");
+                                throw new Error.YamlParserException("'verbatim tag' is not resolved. " +
+                                        "Hence, '!' is invalid", lexerState.getLine(), lexerState.getColumn());
                             }
 
                             int peek = lexerState.peek();
@@ -429,7 +439,8 @@ public class LexerState {
                                 Scanner.iterate(lexerState, VERBATIM_URI_SCANNER, TAG, true);
                                 return this;
                             } else {
-                                throw new RuntimeException("Expected a 'uri-char' after '<' in a 'verbatim tag'");
+                                throw new Error.YamlParserException("expected a 'uri-char' " +
+                                        "after '<' in a 'verbatim tag'", lexerState.getLine(), lexerState.getColumn());
                             }
                         }
                         case ' ', -1, '\t' -> { // Non-specific tag
@@ -478,7 +489,8 @@ public class LexerState {
                     if (!lexerState.keyDefinedForLine && !lexerState.isFlowCollection()) {
                         if (lexerState.mappingKeyColumn != lexerState.getColumn()
                                 && !lexerState.isFlowCollection() && lexerState.mappingKeyColumn > -1) {
-                            throw new RuntimeException("'?' and ':' should have the same indentation");
+                            throw new Error.YamlParserException("'?' and ':' should have the same indentation",
+                                    lexerState.getLine(), lexerState.getColumn());
                         }
                         if (lexerState.mappingKeyColumn == -1) {
                             lexerState.updateStartIndex();
@@ -574,7 +586,7 @@ public class LexerState {
                 return this;
             }
 
-            throw new RuntimeException("Invalid yaml document");
+            throw new Error.YamlParserException("invalid yaml document", lexerState.getLine(), lexerState.getColumn());
         }
     }
 
@@ -587,7 +599,7 @@ public class LexerState {
          * @return Updated lexer state
          */
         @Override
-        public State transition(LexerState lexerState) {
+        public State transition(LexerState lexerState) throws Error.YamlParserException {
 
             // Check fo primary, secondary, and named tag handles
             if (lexerState.peek() == '!') {
@@ -605,7 +617,8 @@ public class LexerState {
                         return this;
                     }
                     case -1 -> {
-                        throw new RuntimeException("Expected a separation in line after primary tag handle");
+                        throw new Error.YamlParserException("expected a separation in line after primary tag handle",
+                                lexerState.getLine(), lexerState.getColumn());
                     }
                     default -> { // Check for named tag handles
                         lexerState.lexeme = "!";
@@ -622,7 +635,8 @@ public class LexerState {
                 return this;
             }
 
-            throw new RuntimeException("Expected '!' to start the tag handle");
+            throw new Error.YamlParserException("expected '!' to start the tag handle",
+                    lexerState.getLine(), lexerState.getColumn());
         }
     }
 
@@ -634,7 +648,7 @@ public class LexerState {
          * @param lexerState - Current lexer state.
          */
         @Override
-        public State transition(LexerState lexerState) {
+        public State transition(LexerState lexerState) throws Error.YamlParserException {
             if (Utils.matchPattern(lexerState, List.of(URI_PATTERN, WORD_PATTERN, new Utils.CharPattern('%')),
                     List.of(FLOW_INDICATOR_PATTERN))) {
                 Scanner.iterate(lexerState, Scanner.URI_SCANNER, TAG_PREFIX);
@@ -647,7 +661,8 @@ public class LexerState {
                 return this;
             }
 
-            throw new RuntimeException("Invalid tag prefix character");
+            throw new Error.YamlParserException("invalid tag prefix character",
+                    lexerState.getLine(), lexerState.getColumn());
         }
     }
 
@@ -659,7 +674,7 @@ public class LexerState {
          * @param lexerState - Current lexer state.
          */
         @Override
-        public State transition(LexerState lexerState) {
+        public State transition(LexerState lexerState) throws Error.YamlParserException {
             // Scan the anchor node
             if (lexerState.peek() == '&') {
                 lexerState.forward();
@@ -679,7 +694,7 @@ public class LexerState {
                 return this;
             }
 
-            throw new RuntimeException("Invalid character tag");
+            throw new Error.YamlParserException("invalid character tag", lexerState.getLine(), lexerState.getColumn());
         }
     }
 
@@ -691,7 +706,7 @@ public class LexerState {
          * @param lexerState - Current lexer state.
          */
         @Override
-        public State transition(LexerState lexerState) {
+        public State transition(LexerState lexerState) throws Error.YamlParserException {
             // Check for decimal digits
             if (Utils.matchPattern(lexerState, List.of(DECIMAL_PATTERN))) {
                 Scanner.iterate(lexerState, Scanner.DIGIT_SCANNER, DECIMAL);
@@ -711,7 +726,8 @@ public class LexerState {
                 return this;
             }
 
-            throw new RuntimeException("Invalid version number character");
+            throw new Error.YamlParserException("invalid version number character",
+                    lexerState.getLine(), lexerState.getColumn());
         }
     }
 
@@ -723,7 +739,7 @@ public class LexerState {
          * @param lexerState - Current lexer state.
          */
         @Override
-        public State transition(LexerState lexerState) {
+        public State transition(LexerState lexerState) throws Error.YamlParserException {
             if (Utils.isMarker(lexerState, true)) {
                 lexerState.forward();
                 lexerState.tokenize(DIRECTIVE_MARKER);
@@ -771,7 +787,7 @@ public class LexerState {
          * @param lexerState - Current lexer state.
          */
         @Override
-        public State transition(LexerState lexerState) {
+        public State transition(LexerState lexerState) throws Error.YamlParserException {
             if (Utils.isMarker(lexerState, true)) {
                 lexerState.forward();
                 lexerState.tokenize(DIRECTIVE_MARKER);
@@ -829,7 +845,7 @@ public class LexerState {
          * @param lexerState - Current lexer state.
          */
         @Override
-        public State transition(LexerState lexerState) {
+        public State transition(LexerState lexerState) throws Error.YamlParserException {
             if (lexerState.peek() == ' ') {
                 Scanner.iterate(lexerState, Scanner.WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
             }
@@ -845,7 +861,8 @@ public class LexerState {
                 lexerState.captureIndent = false;
                 int numericValue = Character.getNumericValue(lexerState.peek());
                 if (numericValue == -1 || numericValue == -2) {
-                    throw new RuntimeException("Invalid numeric value");
+                    throw new Error.YamlParserException("invalid numeric value",
+                            lexerState.getLine(), lexerState.getColumn());
                 }
                 lexerState.addIndent += numericValue;
                 lexerState.forward();
@@ -867,7 +884,7 @@ public class LexerState {
                 return this;
             }
 
-            throw new RuntimeException("Invalid block header");
+            throw new Error.YamlParserException("invalid block header", lexerState.getLine(), lexerState.getColumn());
         }
     }
 
@@ -879,7 +896,7 @@ public class LexerState {
          * @param lexerState - Current lexer state
          */
         @Override
-        public State transition(LexerState lexerState) {
+        public State transition(LexerState lexerState) throws Error.YamlParserException {
             boolean hasSufficientIndent = true;
 
             int limit = lexerState.indent + lexerState.addIndent;
@@ -902,8 +919,9 @@ public class LexerState {
                 switch (lexerState.peek()) {
                     case '#' -> { // Generate beginning of the trailing comment
                         if (!lexerState.trailingComment && lexerState.captureIndent) {
-                            throw new RuntimeException("Block scalars with more-indented leading empty lines"
-                                    + "must use an explicit indentation indicator");
+                            throw new Error.YamlParserException("Block scalars with more-indented leading empty lines"
+                                    + "must use an explicit indentation indicator",
+                                    lexerState.getLine(), lexerState.getColumn());
                         }
 
                         if (lexerState.trailingComment) {
@@ -926,7 +944,8 @@ public class LexerState {
                         return this;
                     }
                     default -> { // Other characters are not allowed when the indentation is less
-                        throw new RuntimeException("Insufficient indent to process literal characters");
+                        throw new Error.YamlParserException("insufficient indent to process literal characters",
+                                lexerState.getLine(), lexerState.getColumn());
                     }
                 }
             }
@@ -947,7 +966,8 @@ public class LexerState {
                             return this;
                         }
                         default -> {
-                            throw new RuntimeException("Invalid trailing comment");
+                            throw new Error.YamlParserException("invalid trailing comment",
+                                    lexerState.getLine(), lexerState.getColumn());
                         }
                     }
                 }
@@ -1001,7 +1021,7 @@ public class LexerState {
          * @param lexerState - Current lexer state
          */
         @Override
-        public State transition(LexerState lexerState) {
+        public State transition(LexerState lexerState) throws Error.YamlParserException {
             // Ignore comments
             if (Utils.isComment(lexerState)) {
                 lexerState.tokenize(EOL);
