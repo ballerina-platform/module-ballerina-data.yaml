@@ -105,6 +105,10 @@ public class CharacterReader {
                 if (isPrintable(codePoint)) {
                     i += Character.charCount(codePoint);
                 } else {
+                    NewLineIndexData newLineIndexData = findLastNewLineIndexAndNewLineCount();
+                    line += newLineIndexData.newLineCount;
+                    column += newLineIndexData.lastNewLineIndex == -1 ? cpIndex
+                            : cpIndex - newLineIndexData.lastNewLineIndex;
                     throw new Error.YamlParserException("non printable character found", line, column);
                 }
             }
@@ -116,6 +120,21 @@ public class CharacterReader {
         } catch (IOException e) {
             throw DiagnosticLog.error(DiagnosticErrorCode.YAML_READER_FAILURE, e.getMessage());
         }
+    }
+
+    private record NewLineIndexData(int lastNewLineIndex, int newLineCount) {
+    };
+
+    private NewLineIndexData findLastNewLineIndexAndNewLineCount() {
+        int idx = -1;
+        int count = 0;
+        for (int i = 0; i < this.dataBuffer.length; i++) {
+            if (this.dataBuffer[i] == 10) {
+                idx = i;
+                count++;
+            }
+        }
+        return new NewLineIndexData(idx, count);
     }
 
     private static boolean isPrintable(int codePoint) {

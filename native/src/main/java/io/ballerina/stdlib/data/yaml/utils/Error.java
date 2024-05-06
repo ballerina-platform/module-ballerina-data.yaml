@@ -7,7 +7,7 @@ public class Error {
         private final int column;
 
         public YamlParserException(String msg, int line, int column) {
-            super(msg);
+                    super(msg);
             this.line = line;
             this.column = column;
         }

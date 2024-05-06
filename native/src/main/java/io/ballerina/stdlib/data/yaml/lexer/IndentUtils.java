@@ -135,8 +135,7 @@ public class IndentUtils {
 
         Collection collection = mapIndex == -1 ? Collection.SEQUENCE : Collection.MAPPING;
 
-        if (sm.getIndent() == startIndex) {
-
+        if (sm.getIndent() > startIndex) {
             List<Collection> existingIndentType = sm.getIndents().stream()
                     .filter(indent -> indent.getColumn() == startIndex)
                     .map(Indent::getCollection)
@@ -155,6 +154,14 @@ public class IndentUtils {
                             "same indent as a block sequence", sm.getLine(), sm.getColumn());
                 }
             }
+        }
+
+        if (sm.getIndent() == startIndex) {
+
+            List<Collection> existingIndentType = sm.getIndents().stream()
+                    .filter(indent -> indent.getColumn() == startIndex)
+                    .map(Indent::getCollection)
+                    .toList();
 
             // The current token is a sequence entry and a mapping key exists for the indent
             if (collection == Collection.SEQUENCE
