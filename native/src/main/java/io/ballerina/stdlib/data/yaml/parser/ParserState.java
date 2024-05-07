@@ -2,6 +2,7 @@ package io.ballerina.stdlib.data.yaml.parser;
 
 import io.ballerina.runtime.api.types.Type;
 import io.ballerina.stdlib.data.yaml.common.Types;
+import io.ballerina.stdlib.data.yaml.common.YamlEvent;
 import io.ballerina.stdlib.data.yaml.lexer.CharacterReader;
 import io.ballerina.stdlib.data.yaml.lexer.LexerState;
 import io.ballerina.stdlib.data.yaml.lexer.Token;
@@ -20,7 +21,7 @@ public class ParserState {
     private Token.TokenType prevToken = Token.TokenType.DUMMY;
     private Token currentToken = DUMMY_TOKEN;
     private Token bufferedToken = DUMMY_TOKEN;
-    private List<ParserEvent> eventBuffer = new ArrayList<>();
+    private List<YamlEvent> eventBuffer = new ArrayList<>();
     private int lineIndex = -1;
     private boolean directiveDocument = false;
     private boolean explicitDoc = false;
@@ -41,7 +42,7 @@ public class ParserState {
         try {
             initLexer();
         } catch (Exception e) {
-            eventBuffer.add(new ParserEvent.EndEvent(Types.Collection.STREAM));
+            eventBuffer.add(new YamlEvent.EndEvent(Types.Collection.STREAM));
         }
 
         // handleExpectedType(type);
@@ -87,7 +88,7 @@ public class ParserState {
         return lexerState;
     }
 
-    public List<ParserEvent> getEventBuffer() {
+    public List<YamlEvent> getEventBuffer() {
         return eventBuffer;
     }
 
