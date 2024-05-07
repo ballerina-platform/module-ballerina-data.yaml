@@ -2,6 +2,7 @@ package io.ballerina.stdlib.data.yaml.parser;
 
 import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.api.TypeTags;
+import io.ballerina.runtime.api.creators.ValueCreator;
 import io.ballerina.runtime.api.flags.SymbolFlags;
 import io.ballerina.runtime.api.types.ArrayType;
 import io.ballerina.runtime.api.types.Field;
@@ -21,10 +22,12 @@ import io.ballerina.stdlib.data.yaml.lexer.Indentation;
 import io.ballerina.stdlib.data.yaml.lexer.LexerState;
 import io.ballerina.stdlib.data.yaml.lexer.Token;
 import io.ballerina.stdlib.data.yaml.lexer.YamlLexer;
+import io.ballerina.stdlib.data.yaml.utils.Constants;
 import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
 import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
 import io.ballerina.stdlib.data.yaml.utils.Error;
 import io.ballerina.stdlib.data.yaml.utils.JsonTraverse;
+import io.ballerina.stdlib.data.yaml.utils.OptionsUtils;
 
 import java.io.Reader;
 import java.util.ArrayDeque;
@@ -78,11 +81,7 @@ public class YamlParser {
         private final ParserState parserState;
         private final Map<String, String> anchorBuffer = new HashMap<>();
         private boolean documentTerminated = false;
-        private boolean allowMapEntryRedefinition = false;
-        private boolean allowAnchorRedefinition = false;
-
         Object currentYamlNode;
-
         Field currentField;
         Deque<Object> nodesStack = new ArrayDeque<>();
         Stack<Map<String, Field>> fieldHierarchy = new Stack<>();
@@ -95,9 +94,21 @@ public class YamlParser {
         Stack<ParserContext> parserContexts = new Stack<>();
         int unionDepth = 0;
         boolean rootValueInitialized = false;
+        final Types.YAMLSchema schema;
+        final boolean allowAnchorRedefinition;
+        final boolean allowMapEntryRedefinition;
+        final boolean allowDataProjection;
+        final boolean nilAsOptionalField;
+        final boolean absentAsNilableType;
 
-        public ComposerState(ParserState parserState) {
+        public ComposerState(ParserState parserState, OptionsUtils.ReadConfig readConfig) {
             this.parserState = parserState;
+            this.schema = readConfig.schema();
+            this.allowAnchorRedefinition = readConfig.allowAnchorRedefinition();
+            this.allowMapEntryRedefinition = readConfig.allowMapEntryRedefinition();
+            this.allowDataProjection = readConfig.allowDataProjection();
+            this.nilAsOptionalField = readConfig.nilAsOptionalField();
+            this.absentAsNilableType = readConfig.absentAsNilableType();
         }
 
         public int getLine() {
@@ -177,7 +188,17 @@ public class YamlParser {
             if (unionDepth > 0) {
                 return json;
             }
-            return JsonTraverse.traverse(json, expectedTypes.peek());
+            BMap<BString, Object> options = ValueCreator.createMapValue();
+            BMap<BString, Object> allowDataProjectionMap = ValueCreator.createMapValue();
+            if (!allowDataProjection) {
+                options.put(Constants.ALLOW_DATA_PROJECTION, false);
+            } else {
+                allowDataProjectionMap.put(Constants.NIL_AS_OPTIONAL_FIELD, nilAsOptionalField);
+                allowDataProjectionMap.put(Constants.ABSENT_AS_NILABLE_TYPE, absentAsNilableType);
+                options.put(Constants.ALLOW_DATA_PROJECTION, allowDataProjectionMap);
+            }
+
+            return JsonTraverse.traverse(json, options, expectedTypes.peek());
         }
 
         private void finalizeObject() {
@@ -270,12 +291,14 @@ public class YamlParser {
      * Parses the contents in the given {@link Reader} and returns subtype of anydata value.
      *
      * @param reader reader which contains the YAML content
+     * @param options represent the options that can be used to modify the behaviour of conversion
      * @param expectedType Shape of the YAML content required
      * @return subtype of anydata value
      * @throws BError for any parsing error
      */
-    public static Object parse(Reader reader, Type expectedType) throws BError {
-        ComposerState composerState = new ComposerState(new ParserState(reader, expectedType));
+    public static Object parse(Reader reader, BMap<BString, Object> options, Type expectedType) throws BError {
+        OptionsUtils.ReadConfig readConfig = OptionsUtils.resolveReadConfig(options);
+        ComposerState composerState = new ComposerState(new ParserState(reader, expectedType), readConfig);
         composerState.handleExpectedType(expectedType);
         try {
             return parseDocument(composerState);

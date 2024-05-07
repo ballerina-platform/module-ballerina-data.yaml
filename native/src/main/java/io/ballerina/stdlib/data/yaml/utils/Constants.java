@@ -13,4 +13,9 @@ public class Constants {
     public static final BString SCHEMA = StringUtils.fromString("schema");
     public static final BString IS_STREAM = StringUtils.fromString("isStream");
     public static final BString FLOW_STYLE = StringUtils.fromString("flowStyle");
+    public static final BString ALLOW_ANCHOR_REDEFINITION = StringUtils.fromString("allowAnchorRedefinition");
+    public static final BString ALLOW_MAP_ENTRY_REDEFINITION = StringUtils.fromString("allowMapEntryRedefinition");
+    public static final BString ALLOW_DATA_PROJECTION = StringUtils.fromString("allowDataProjection");
+    public static final BString NIL_AS_OPTIONAL_FIELD = StringUtils.fromString("nilAsOptionalField");
+    public static final BString ABSENT_AS_NILABLE_TYPE = StringUtils.fromString("absentAsNilableType");
 }

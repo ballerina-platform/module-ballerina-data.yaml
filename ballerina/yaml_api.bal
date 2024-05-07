@@ -13,7 +13,6 @@
 // KIND, either express or implied. See the License for the
 // specific language governing permissions and limitations
 // under the License.
-
 import ballerina/jballerina.java;
 
 # Converts YAML string to subtype of anydata.
@@ -57,7 +56,7 @@ public isolated function toYamlString(anydata yamlValue, WriteConfig config) ret
 }
 
 isolated function toYamlStringArray(anydata yamlValue, WriteConfig config)
-    returns string[]|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native" } external;
+    returns string[]|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
 
 # Represents the YAML schema available for the parser.
 #
@@ -75,10 +74,17 @@ public enum YAMLSchema {
 # + schema - field description  
 # + allowAnchorRedefinition - field description  
 # + allowMapEntryRedefinition - field description
+# + allowDataProjection - Enable or disable projection
 public type Options record {
     YAMLSchema schema = CORE_SCHEMA;
     boolean allowAnchorRedefinition = true;
     boolean allowMapEntryRedefinition = false;
+    record {
+        # If `true`, nil values will be considered as optional fields in the projection.
+        boolean nilAsOptionalField = false;
+        # If `true`, absent fields will be considered as nilable types in the projection.
+        boolean absentAsNilableType = false;
+    }|false allowDataProjection = {};
 };
 
 # Configurations for writing a YAML document.

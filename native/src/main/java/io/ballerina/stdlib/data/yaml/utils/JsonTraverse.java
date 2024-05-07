@@ -33,9 +33,19 @@ public class JsonTraverse {
 
     private static final ThreadLocal<JsonTree> tlJsonTree = ThreadLocal.withInitial(JsonTree::new);
 
-    public static Object traverse(Object json, Type type) {
+    public static Object traverse(Object json, BMap<BString, Object> options, Type type) {
         JsonTree jsonTree = tlJsonTree.get();
         try {
+            Object allowDataProjection = options.get(Constants.ALLOW_DATA_PROJECTION);
+            if (allowDataProjection instanceof Boolean) {
+                jsonTree.allowDataProjection = false;
+            } else if (allowDataProjection instanceof BMap<?, ?>) {
+                jsonTree.allowDataProjection = true;
+                jsonTree.absentAsNilableType =
+                        (Boolean) ((BMap<?, ?>) allowDataProjection).get(Constants.ABSENT_AS_NILABLE_TYPE);
+                jsonTree.nilAsOptionalField =
+                        (Boolean) ((BMap<?, ?>) allowDataProjection).get(Constants.NIL_AS_OPTIONAL_FIELD);
+            }
             return jsonTree.traverseJson(json, type);
         } finally {
             jsonTree.reset();
@@ -49,6 +59,8 @@ public class JsonTraverse {
         Deque<String> fieldNames = new ArrayDeque<>();
         Type rootArray;
         boolean allowDataProjection = true;
+        boolean nilAsOptionalField = false;
+        boolean absentAsNilableType = false;
 
         void reset() {
             currentField = null;
@@ -56,6 +68,9 @@ public class JsonTraverse {
             restType.clear();
             fieldNames.clear();
             rootArray = null;
+            allowDataProjection = false;
+            nilAsOptionalField = false;
+            absentAsNilableType = false;
         }
 
         private Object traverseJson(Object json, Type type) {
@@ -162,7 +177,7 @@ public class JsonTraverse {
                 int currentFieldTypeTag = currentFieldType.getTag();
                 Object mapValue = map.get(key);
 
-                if (!currentFieldType.isNilable() && mapValue == null
+                if (nilAsOptionalField && !currentFieldType.isNilable() && mapValue == null
                         && SymbolFlags.isFlagOn(currentField.getFlags(), SymbolFlags.OPTIONAL)) {
                     continue;
                 }
@@ -250,7 +265,7 @@ public class JsonTraverse {
 
         private void checkOptionalFieldsAndLogError(Map<String, Field> currentField) {
             currentField.values().forEach(field -> {
-                if (field.getFieldType().isNilable()) {
+                if (field.getFieldType().isNilable() && absentAsNilableType) {
                     return;
                 }
                 if (SymbolFlags.isFlagOn(field.getFlags(), SymbolFlags.REQUIRED)) {

@@ -49,7 +49,7 @@ public class Native {
 
     public static Object parseString(BString yaml, BMap<BString, Object> options, BTypedesc typed) {
         try {
-            return YamlParser.parse(new StringReader(yaml.getValue()), typed.getDescribingType());
+            return YamlParser.parse(new StringReader(yaml.getValue()), options, typed.getDescribingType());
         } catch (BError e) {
             return e;
         }
@@ -58,7 +58,7 @@ public class Native {
     public static Object parseBytes(BArray yaml, BMap<BString, Object> options, BTypedesc typed) {
         try {
             return YamlParser.parse(new InputStreamReader(new ByteArrayInputStream(yaml.getBytes())),
-                    typed.getDescribingType());
+                    options, typed.getDescribingType());
         } catch (BError e) {
             return e;
         }
