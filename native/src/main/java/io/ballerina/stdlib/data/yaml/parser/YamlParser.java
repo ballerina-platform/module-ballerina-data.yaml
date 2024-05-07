@@ -140,13 +140,13 @@ public class YamlParser {
             finalizeArrayObjectAndRemoveExpectedType();
         }
 
-        public void checkUnionAndFinalizeNonArrayObject(boolean isParentSequence) {
+        public void checkUnionAndFinalizeNonArrayObject() {
             if (unionDepth > 0) {
                 fieldNameHierarchy.pop();
                 finalizeObject();
                 return;
             }
-            finalizeNonArrayObjectAndRemoveExpectedType(isParentSequence);
+            finalizeNonArrayObjectAndRemoveExpectedType();
         }
 
         private void finalizeArrayObjectAndRemoveExpectedType() {
@@ -154,11 +154,9 @@ public class YamlParser {
             expectedTypes.pop();
         }
 
-        public void finalizeNonArrayObjectAndRemoveExpectedType(boolean isParentSequence) {
+        public void finalizeNonArrayObjectAndRemoveExpectedType() {
             finalizeNonArrayObject();
-            if (!isParentSequence) {
-                expectedTypes.pop();
-            }
+            expectedTypes.pop();
         }
 
         private void finalizeNonArrayObject() {
@@ -589,7 +587,7 @@ public class YamlParser {
             event = parse(state.parserState, EXPECT_MAP_KEY);
         }
 
-        state.checkUnionAndFinalizeNonArrayObject(isParentSequence);
+        state.checkUnionAndFinalizeNonArrayObject();
         return structure;
     }
 

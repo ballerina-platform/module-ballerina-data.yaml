@@ -147,6 +147,10 @@ public class Values {
                 state.visitedFieldHierarchy.peek().put(jsonFieldName, currentField);
             }
             state.expectedTypes.push(fieldType);
+
+            if (!state.allowDataProjection && fieldType == null)  {
+                throw DiagnosticLog.error(DiagnosticErrorCode.UNDEFINED_FIELD, jsonFieldName);
+            }
         } else if (state.expectedTypes.peek() == null) {
             state.currentField = null;
             state.expectedTypes.push(null);
@@ -278,7 +282,7 @@ public class Values {
         return nextMapValue;
     }
 
-    static Type getMemberType(Type expectedType, int index) {
+    static Type getMemberType(Type expectedType, int index, boolean allowDataProjection) {
         if (expectedType == null) {
             return null;
         }
@@ -290,12 +294,19 @@ public class Values {
                 return arrayType.getElementType();
             }
 
+            if (!allowDataProjection) {
+                throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+            }
             return null;
         } else if (expectedType.getTag() == TypeTags.TUPLE_TAG) {
             TupleType tupleType = (TupleType) expectedType;
             List<Type> tupleTypes = tupleType.getTupleTypes();
             if (tupleTypes.size() < index + 1) {
-                return tupleType.getRestType();
+                Type restType = tupleType.getRestType();
+                if (restType == null && !allowDataProjection) {
+                    throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+                }
+                return restType;
             }
             return tupleTypes.get(index);
         }
@@ -488,7 +499,7 @@ public class Values {
             return;
         }
         state.expectedTypes.push(getMemberType(state.expectedTypes.peek(),
-                state.arrayIndexes.peek()));
+                state.arrayIndexes.peek(), state.allowDataProjection));
     }
 
     static void updateNextMapValueBasedOnExpType(YamlParser.ComposerState state) {

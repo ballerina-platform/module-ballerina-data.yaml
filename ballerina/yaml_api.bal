@@ -75,7 +75,7 @@ public enum YAMLSchema {
 # + allowAnchorRedefinition - field description  
 # + allowMapEntryRedefinition - field description
 # + allowDataProjection - Enable or disable projection
-public type Options record {
+public type Options record {|
     YAMLSchema schema = CORE_SCHEMA;
     boolean allowAnchorRedefinition = true;
     boolean allowMapEntryRedefinition = false;
@@ -85,7 +85,7 @@ public type Options record {
         # If `true`, absent fields will be considered as nilable types in the projection.
         boolean absentAsNilableType = false;
     }|false allowDataProjection = {};
-};
+|};
 
 # Configurations for writing a YAML document.
 #
@@ -96,6 +96,7 @@ public type Options record {
 # + forceQuotes - If set, all the scalars are surrounded by quotes
 # + schema - YAML schema used for writing
 # + isStream - If set, the parser will write a stream of YAML documents
+# + flowStyle - If set, mappings and sequences will output in flow style
 public type WriteConfig record {|
     int indentationPolicy = 2;
     int blockLevel = 1;
