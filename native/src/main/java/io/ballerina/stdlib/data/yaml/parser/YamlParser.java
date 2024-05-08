@@ -28,6 +28,7 @@ import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
 import io.ballerina.stdlib.data.yaml.utils.Error;
 import io.ballerina.stdlib.data.yaml.utils.JsonTraverse;
 import io.ballerina.stdlib.data.yaml.utils.OptionsUtils;
+import io.ballerina.stdlib.data.yaml.utils.TagResolutionUtils;
 
 import java.io.Reader;
 import java.util.ArrayDeque;
@@ -396,7 +397,7 @@ public class YamlParser {
             return null;
         }
 
-        Object output = null;
+        Object output;
         // Check for collections
         if (eventKind == YamlEvent.EventKind.START_EVENT) {
             YamlEvent.StartEvent startEvent = (YamlEvent.StartEvent) event;
@@ -425,7 +426,7 @@ public class YamlParser {
         output =  castData(state, scalarEvent.getValue(), Types.FailSafeSchema.STRING, event.getTag());
         checkAnchor(state, event, output);
         if (mapOrSequenceScalar) {
-            return output.toString();
+            return output;
         }
         processValue(state, scalarEvent.getValue());
         return state.currentYamlNode;
@@ -499,6 +500,9 @@ public class YamlParser {
                     state.currentYamlNode = state.verifyAndConvertToUnion(value);
                     state.finalizeAnchorValueObject();
                     state.expectedTypes.pop();
+                } else if (value == null || value instanceof Double
+                        || value instanceof Long || value instanceof Boolean) {
+                    state.currentYamlNode = Values.updateCurrentValueNode(state, state.currentYamlNode, value);
                 }
                 event = parse(state.parserState, EXPECT_SEQUENCE_ENTRY);
             }
@@ -619,7 +623,9 @@ public class YamlParser {
                     state.currentYamlNode = state.verifyAndConvertToUnion(value);
                     state.finalizeAnchorValueObject();
                     state.expectedTypes.pop();
-
+                } else if (value == null || value instanceof Double
+                        || value instanceof Long || value instanceof Boolean) {
+                    state.currentYamlNode = Values.updateCurrentValueNode(state, state.currentYamlNode, value);
                 }
             }
 
@@ -664,27 +670,54 @@ public class YamlParser {
                 if (kind == Types.FailSafeSchema.STRING) {
                     return data.toString();
                 }
-                throw new Error.YamlParserException("unexpected kind error", state.getLine(), state.getColumn());
             }
 
             if (tag.equals(DEFAULT_GLOBAL_TAG_HANDLE + "seq")) {
                 if (kind == Types.FailSafeSchema.SEQUENCE) {
                     return data;
                 }
-                throw new Error.YamlParserException("unexpected kind error", state.getLine(), state.getColumn());
             }
 
             if (tag.equals(DEFAULT_GLOBAL_TAG_HANDLE + "map")) {
                 if (kind == Types.FailSafeSchema.MAPPING) {
                     return data;
                 }
-                throw new Error.YamlParserException("unexpected kind error", state.getLine(), state.getColumn());
+            }
+
+            if (tag.equals(DEFAULT_GLOBAL_TAG_HANDLE + "int")) {
+                if (state.schema == Types.YAMLSchema.JSON_SCHEMA) {
+                    return TagResolutionUtils.constructSimpleInt(data.toString(), state);
+                } else if (state.schema == Types.YAMLSchema.CORE_SCHEMA) {
+                    return TagResolutionUtils.constructInt(data.toString(), state);
+                }
+            }
+
+            if (tag.equals(DEFAULT_GLOBAL_TAG_HANDLE + "float")) {
+                if (state.schema == Types.YAMLSchema.JSON_SCHEMA) {
+                    return TagResolutionUtils.constructSimpleFloat(data.toString(), state);
+                } else if (state.schema == Types.YAMLSchema.CORE_SCHEMA) {
+                    return TagResolutionUtils.constructFloat(data.toString(), state);
+                }
+            }
+
+            if (tag.equals(DEFAULT_GLOBAL_TAG_HANDLE + "bool")) {
+                if (state.schema == Types.YAMLSchema.JSON_SCHEMA) {
+                    return TagResolutionUtils.constructSimpleBool(data.toString(), state);
+                } else if (state.schema == Types.YAMLSchema.CORE_SCHEMA) {
+                    return TagResolutionUtils.constructBool(data.toString(), state);
+                }
+            }
+
+            if (tag.equals(DEFAULT_GLOBAL_TAG_HANDLE + "null")) {
+                if (state.schema == Types.YAMLSchema.JSON_SCHEMA) {
+                    return TagResolutionUtils.constructSimpleNull(data.toString(), state);
+                } else if (state.schema == Types.YAMLSchema.CORE_SCHEMA) {
+                    return TagResolutionUtils.constructNull(data.toString(), state);
+                }
             }
 
             throw new Error.YamlParserException("tag schema not supported", state.getLine(), state.getColumn());
         }
-
-        // Return as a type of the YAML failsafe schema.
         return data;
     }
 

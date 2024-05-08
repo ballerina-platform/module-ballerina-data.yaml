@@ -169,6 +169,10 @@ public class Values {
             throw DiagnosticLog.error(DiagnosticErrorCode.INCOMPATIBLE_TYPE, type, value);
         }
 
+        return updateCurrentValueNode(sm, currentYaml, convertedValue);
+    }
+
+    static Object updateCurrentValueNode(YamlParser.ComposerState sm, Object currentYaml, Object convertedValue) {
         Type currentJsonNodeType = TypeUtils.getType(currentYaml);
         switch (currentJsonNodeType.getTag()) {
             case TypeTags.MAP_TAG, TypeTags.RECORD_TYPE_TAG -> {
@@ -444,18 +448,18 @@ public class Values {
     }
 
     private static Object stringToBoolean(String value) throws NumberFormatException {
-        if ("true".equalsIgnoreCase(value) || "1".equalsIgnoreCase(value)) {
+        if (value.equals("true")) {
             return true;
         }
 
-        if ("false".equalsIgnoreCase(value) || "0".equalsIgnoreCase(value)) {
+        if (value.equals("false")) {
             return false;
         }
         return returnError(value, "boolean");
     }
 
     private static Object stringToNull(String value) throws NumberFormatException {
-        if ("null".equalsIgnoreCase(value) || "()".equalsIgnoreCase(value)) {
+        if (value.equals("null")) {
             return null;
         }
         return returnError(value, "()");
