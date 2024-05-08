@@ -87,17 +87,17 @@ public class TagResolutionUtils {
             if (value.startsWith(".")) {
                 String valueSuffix = value.substring(1);
                 if (valueSuffix.equals("nan") || valueSuffix.equals("NaN") || valueSuffix.equals("NAN")) {
-                    return Float.NaN;
+                    return Double.NaN;
                 }
                 if (valueSuffix.equals("inf") || valueSuffix.equals("Inf") || valueSuffix.equals("INF")) {
-                    return Float.POSITIVE_INFINITY;
+                    return Double.POSITIVE_INFINITY;
                 }
             } else if (value.startsWith("+.") || value.startsWith("-.")) {
                 String valueSuffix = value.substring(1);
                 boolean isInfinity = valueSuffix.equals("inf") ||
                         valueSuffix.equals("Inf") || valueSuffix.equals("INF");
                 if (isInfinity) {
-                    return value.startsWith("+") ? Float.POSITIVE_INFINITY : Float.NEGATIVE_INFINITY;
+                    return value.startsWith("+") ? Double.POSITIVE_INFINITY : Double.NEGATIVE_INFINITY;
                 }
             }
         }

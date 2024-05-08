@@ -183,7 +183,7 @@ public class Scanner {
             }
 
             // Terminate if a whitespace or a flow indicator is detected
-            if (matchPattern(sm, List.of(WHITE_SPACE_PATTERN, FLOW_INDICATOR_PATTERN))) {
+            if (matchPattern(sm, List.of(WHITE_SPACE_PATTERN, FLOW_INDICATOR_PATTERN, LINE_BREAK_PATTERN))) {
                 return true;
             }
 
