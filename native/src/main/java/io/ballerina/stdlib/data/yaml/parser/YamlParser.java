@@ -31,8 +31,6 @@ import io.ballerina.stdlib.data.yaml.utils.OptionsUtils;
 
 import java.io.Reader;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -40,6 +38,7 @@ import java.util.Map;
 import java.util.Stack;
 
 import static io.ballerina.stdlib.data.yaml.common.Types.Collection.SEQUENCE;
+import static io.ballerina.stdlib.data.yaml.common.Types.Collection.STREAM;
 import static io.ballerina.stdlib.data.yaml.common.Types.DEFAULT_GLOBAL_TAG_HANDLE;
 import static io.ballerina.stdlib.data.yaml.common.Types.DEFAULT_LOCAL_TAG_HANDLE;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.ANCHOR;
@@ -79,7 +78,7 @@ public class YamlParser {
 
     public static class ComposerState {
         private final ParserState parserState;
-        private final Map<String, String> anchorBuffer = new HashMap<>();
+        private final Map<String, Object> anchorBuffer = new HashMap<>();
         private boolean documentTerminated = false;
         Object currentYamlNode;
         Field currentField;
@@ -92,6 +91,7 @@ public class YamlParser {
         int jsonFieldDepth = 0;
         Stack<Integer> arrayIndexes = new Stack<>();
         Stack<ParserContext> parserContexts = new Stack<>();
+        YamlEvent terminatedDocEvent = null;
         int unionDepth = 0;
         boolean rootValueInitialized = false;
         final Types.YAMLSchema schema;
@@ -244,7 +244,46 @@ public class YamlParser {
             }
 
             currentYamlNode = parentNode;
-            return;
+        }
+
+        public void finalizeAnchorValueObject() {
+            // Skip the value and continue to next state.
+            if (!expectedTypes.isEmpty() && expectedTypes.peek() == null) {
+                return;
+            }
+
+            if (nodesStack.isEmpty()) {
+                return;
+            }
+
+            Object parentNode = nodesStack.pop();
+            Type parentNodeType = TypeUtils.getType(parentNode);
+            int parentNodeTypeTag = TypeUtils.getReferredType(parentNodeType).getTag();
+            if (parentNodeTypeTag == TypeTags.RECORD_TYPE_TAG || parentNodeTypeTag == TypeTags.MAP_TAG) {
+                ((BMap<BString, Object>) parentNode).put(StringUtils.fromString(fieldNameHierarchy.peek().pop()),
+                        currentYamlNode);
+                currentYamlNode = parentNode;
+                return;
+            }
+
+            switch (TypeUtils.getType(parentNode).getTag()) {
+                case TypeTags.ARRAY_TAG -> {
+                    // Handle projection in array.
+                    ArrayType arrayType = (ArrayType) parentNodeType;
+                    if (arrayType.getState() == ArrayType.ArrayState.CLOSED &&
+                            arrayType.getSize() <= arrayIndexes.peek()) {
+                        break;
+                    }
+                    ((BArray) parentNode).add(arrayIndexes.peek(), currentYamlNode);
+                }
+                case TypeTags.TUPLE_TAG -> {
+                    ((BArray) parentNode).add(arrayIndexes.peek(), currentYamlNode);
+                }
+                default -> {
+                }
+            }
+
+            currentYamlNode = parentNode;
         }
 
         public void handleExpectedType(Type type) {
@@ -318,17 +357,17 @@ public class YamlParser {
 
         Object output = handleEvent(state, event, false);
 
-//        // Return an error if there is another root event
-//        event = check checkEvent(state);
-//        if event is common:EndEvent && event.endType == common:STREAM {
-//            return output;
-//        }
-//        if event is common:DocumentMarkerEvent {
-//            state.terminatedDocEvent = event;
-//            return output;
-//        }
-//        return generateComposeError(state, "There can only be one root event to a document", event);
-        return output;
+        // Return an error if there is another root event
+        event = parse(state.parserState);
+        if (event.getKind() == YamlEvent.EventKind.END_EVENT && ((YamlEvent.EndEvent) event).getEndType() == STREAM) {
+            return output;
+        }
+        if (event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
+            state.terminatedDocEvent = event;
+            return output;
+        }
+        throw new Error.YamlParserException("there can only be one root event to a document", state.getLine(),
+                state.getColumn());
     }
 
     private static Object handleEvent(ComposerState state, YamlEvent event, boolean mapOrSequenceScalar)
@@ -339,7 +378,7 @@ public class YamlParser {
 
         if (eventKind == YamlEvent.EventKind.ALIAS_EVENT) {
             YamlEvent.AliasEvent aliasEvent = (YamlEvent.AliasEvent) event;
-            String alias = state.anchorBuffer.get(aliasEvent.getAlias());
+            Object alias = state.anchorBuffer.get(aliasEvent.getAlias());
             if (alias == null) {
                 throw new Error.YamlParserException("anchor does not exist", state.getLine(), state.getColumn());
             }
@@ -376,7 +415,7 @@ public class YamlParser {
                             state.getLine(), state.getColumn());
                 }
             }
-            checkAnchor(state, event, output.toString());
+            checkAnchor(state, event, output);
             return state.currentYamlNode;
         }
 
@@ -384,7 +423,7 @@ public class YamlParser {
 
         // Check for scalar
         output =  castData(state, scalarEvent.getValue(), Types.FailSafeSchema.STRING, event.getTag());
-        checkAnchor(state, event, output.toString());
+        checkAnchor(state, event, output);
         if (mapOrSequenceScalar) {
             return output.toString();
         }
@@ -415,7 +454,6 @@ public class YamlParser {
             Values.updateNextArrayValueBasedOnExpType(state);
         }
 
-        List<Object> sequence = new ArrayList<>();
         YamlEvent event = parse(state.parserState, EXPECT_SEQUENCE_VALUE);
 
         // Iterate until the end sequence event is detected
@@ -456,25 +494,27 @@ public class YamlParser {
                 Object value = handleEvent(state, event, true);
                 if (value instanceof String scalarValue) {
                     processValue(state, scalarValue);
+                } else if (event.getKind() == YamlEvent.EventKind.ALIAS_EVENT) {
+                    state.nodesStack.push(state.currentYamlNode);
+                    state.currentYamlNode = state.verifyAndConvertToUnion(value);
+                    state.finalizeAnchorValueObject();
+                    state.expectedTypes.pop();
                 }
                 event = parse(state.parserState, EXPECT_SEQUENCE_ENTRY);
             }
         }
 
+        Object tmpCurrentYaml = state.currentYamlNode;
         state.checkUnionAndFinalizeArrayObject();
-
-        return (sequence.size() == 0 && !flowStyle) ? Collections.singletonList(null) : sequence;
+        return tmpCurrentYaml;
     }
 
     public static Object composeMapping(ComposerState state, boolean flowStyle, boolean implicitMapping)
             throws Error.YamlParserException {
-        boolean isParentSequence = false;
         if (!state.rootValueInitialized) {
             state.currentYamlNode = Values.initRootMapValue(state);
             state.rootValueInitialized = true;
         } else {
-            Object currentYamlNode = state.currentYamlNode;
-            isParentSequence = TypeUtils.getType(currentYamlNode).getTag() == TypeTags.ARRAY_TAG;
             Values.updateNextMapValueBasedOnExpType(state);
         }
         Map<String, Object> structure = new HashMap<>();
@@ -533,14 +573,12 @@ public class YamlParser {
                 YamlEvent.EndEvent endEvent = (YamlEvent.EndEvent) event;
                 switch (endEvent.getEndType()) {
                     case MAPPING -> {
-                        structure.put(key, null);
                         terminated = true;
                     }
                     case SEQUENCE -> throw new Error.YamlParserException("unexpected event error",
                             state.getLine(), state.getColumn());
                     default -> {
                         if (!flowStyle) {
-                            structure.put(key, null);
                             terminated = true;
                             break;
                         }
@@ -576,6 +614,12 @@ public class YamlParser {
                             } catch (BError ignored) { }
                         }
                     }
+                } else if (event.getKind() == YamlEvent.EventKind.ALIAS_EVENT) {
+                    state.nodesStack.push(state.currentYamlNode);
+                    state.currentYamlNode = state.verifyAndConvertToUnion(value);
+                    state.finalizeAnchorValueObject();
+                    state.expectedTypes.pop();
+
                 }
             }
 
@@ -587,8 +631,9 @@ public class YamlParser {
             event = parse(state.parserState, EXPECT_MAP_KEY);
         }
 
+        Object tmpCurrentYaml = state.currentYamlNode;
         state.checkUnionAndFinalizeNonArrayObject();
-        return structure;
+        return tmpCurrentYaml;
     }
 
 
@@ -599,7 +644,7 @@ public class YamlParser {
      * @param event - The event representing the alias name
      * @param assignedValue - Anchored value to the alias
      */
-    public static void checkAnchor(ComposerState state, YamlEvent event, String assignedValue)
+    public static void checkAnchor(ComposerState state, YamlEvent event, Object assignedValue)
             throws Error.YamlParserException {
 
         if (event.getAnchor() != null) {
@@ -707,8 +752,7 @@ public class YamlParser {
         if (currentTokenType == EOL || currentTokenType == EMPTY_LINE || currentTokenType == COMMENT) {
 
             LexerState lexerState = state.getLexerState();
-            if ((!lexerState.isNewLine() && state.getLineIndex() >= state.getNumLines() - 1)
-                || (lexerState.isNewLine() && lexerState.isEndOfStream()))  {
+            if (lexerState.isEndOfStream())  {
                 if (docType == DIRECTIVE_DOCUMENT) {
                     throw new Error.YamlParserException("invalid document", state.getLine(), state.getColumn());
                 }
@@ -1612,8 +1656,7 @@ public class YamlParser {
 
                     // Terminate at the end of the line
                     LexerState lexerState = state.getLexerState();
-                    if ((!lexerState.isNewLine() && state.getLineIndex() >= state.getNumLines() - 1) ||
-                            (lexerState.isNewLine() && lexerState.isEndOfStream())) {
+                    if (lexerState.isEndOfStream()) {
                         terminate = true;
                         break;
                     }
