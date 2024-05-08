@@ -928,4 +928,30 @@ isolated function testNilableTypeAsFieldTypeForParseAsType() returns error? {
 
 @test:Config
 isolated function testEscapeCharacterCaseForParseString() returns error? {
+    string jsonStr1 = string `
+    {
+        "A": "\\A_Field",
+        "B": "\/B_Field",
+        "C": "\"C_Field\"",
+        "D": "\uD83D\uDE01",
+        "E": "FIELD\nE",
+        "F": "FIELD\rF",
+        "G": "FIELD\tG",
+        "H": ["\\A_Field", "\/B_Field", "\"C_Field\"", "\uD83D\uDE01", "FIELD\nE", "FIELD\rF", "FIELD\tG"]
+    }
+    `;
+    OpenRecord val1 = check parseString(jsonStr1);
+
+    OpenRecord expectedResult = {
+        "A": "\\\\A_Field",
+        "B": "/B_Field",
+        "C": "\"C_Field\"",
+        "D": "😁",
+        "E": "FIELD\nE",
+        "F": "FIELD\rF",
+        "G": "FIELD\tG",
+        "H": ["\\\\A_Field", "/B_Field", "\"C_Field\"", "😁", "FIELD\nE", "FIELD\rF", "FIELD\tG"]
+    };
+
+    test:assertEquals(val1, expectedResult);
 }

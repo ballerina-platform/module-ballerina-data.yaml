@@ -467,10 +467,10 @@ public class Scanner {
 
         StringBuilder unicodeDigits = new StringBuilder();
         // Check if the digits adhere to the hexadecimal code pattern.
-        for (int i = 0; i < length - 1; i++) {
+        for (int i = 0; i < length; i++) {
             sm.forward();
-            int peek = sm.peek(i);
-            if (HEXA_DECIMAL_PATTERN.pattern(sm.peek(i))) {
+            int peek = sm.peek();
+            if (HEXA_DECIMAL_PATTERN.pattern(peek)) {
                 unicodeDigits.append(Character.toString(peek));
                 continue;
             }
@@ -480,8 +480,7 @@ public class Scanner {
 
         // Check if the lexeme can be converted to hexadecimal
         int hexResult = HexFormat.fromHexDigits(unicodeDigits.toString());
-
-        sm.appendToLexeme(new String(Character.toChars(hexResult)));
+        sm.appendToLexeme(Character.toString(hexResult));
     }
 
     private static void escapedCharacterScan(LexerState sm) throws Error.YamlParserException {
