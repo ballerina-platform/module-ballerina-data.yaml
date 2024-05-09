@@ -312,9 +312,7 @@ public class YamlParser {
                     expectedTypes.push(type);
                     updateFieldHierarchiesAndRestType(new HashMap<>(), ((MapType) type).getConstrainedType());
                 }
-                case TypeTags.TYPE_REFERENCED_TYPE_TAG -> {
-                    handleExpectedType(TypeUtils.getReferredType(type));
-                }
+                case TypeTags.TYPE_REFERENCED_TYPE_TAG -> handleExpectedType(TypeUtils.getReferredType(type));
                 default -> throw DiagnosticLog.error(DiagnosticErrorCode.UNSUPPORTED_TYPE, type);
             }
         }
@@ -348,7 +346,7 @@ public class YamlParser {
 
     private static Object parseDocument(ComposerState state) throws Error.YamlParserException {
 
-        YamlEvent event = parse(state.parserState);
+        YamlEvent event = parse(state.parserState, ANY_DOCUMENT);
 
         // Ignore the start document marker for explicit documents
         if (event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT &&
@@ -773,7 +771,9 @@ public class YamlParser {
             return eventBuffer.remove(0);
         }
         state.updateLexerState(LexerState.LEXER_START_STATE);
-        getNextToken(state);
+        if (!state.isExplicitDoc()) {
+            getNextToken(state);
+        }
 
         // Ignore the whitespace at the head
         if (state.getCurrentToken().getType() == SEPARATION_IN_LINE) {

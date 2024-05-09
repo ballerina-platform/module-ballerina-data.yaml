@@ -184,10 +184,17 @@ public class Utils {
 
     public static boolean isMarker(LexerState sm, boolean directive) {
         int directiveCodePoint = directive ? '-' : '.';
-        if (sm.peek() == directiveCodePoint && sm.peek(1) == directiveCodePoint && sm.peek(2) == directiveCodePoint
-                && (WHITE_SPACE_PATTERN.pattern(sm.peek(3)) || sm.peek(3) == -1)) {
-            sm.forward(2);
-            return true;
+        if (sm.peek() == directiveCodePoint && sm.peek(1) == directiveCodePoint
+                && sm.peek(2) == directiveCodePoint) {
+            if (WHITE_SPACE_PATTERN.pattern(sm.peek(3)) || LINE_BREAK_PATTERN.pattern(sm.peek(3))) {
+                sm.forward(2);
+                return true;
+            }
+            if (sm.peek(3) == -1) {
+                sm.forward(2);
+                sm.forward();
+                return true;
+            }
         }
         return false;
     }

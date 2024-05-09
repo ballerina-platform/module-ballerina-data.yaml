@@ -106,7 +106,7 @@ public class LexerState {
     }
 
     public void forward(int k) {
-        characterReader.forward(k);
+        eofStream = characterReader.forward(k);
     }
 
     public void updateStartIndex() {
