@@ -34,7 +34,6 @@ import org.ballerinalang.langlib.value.CloneReadOnly;
 
 import java.io.Reader;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -403,15 +402,20 @@ public class YamlParser {
     }
 
     private static Object composeStream(ComposerState state) throws Error.YamlParserException {
-        List<Object> output = new ArrayList<>();
-
         YamlEvent event = handleEvent(state, ANY_DOCUMENT);
 
-        Type peek = state.expectedTypes.peek();
+        state.currentYamlNode = Values.initRootArrayValue(state);
+        state.rootValueInitialized = true;
+
+        int prevUnionDepth = state.unionDepth;
+        state.unionDepth = 0;
+
         // Iterate all the documents
         while (!(event.getKind() == YamlEvent.EventKind.END_EVENT
                 && ((YamlEvent.EndEvent) event).getEndType() == STREAM)) {
-            output.add(composeDocument(state, event));
+            Values.updateExpectedType(state);
+            composeDocument(state, event);
+            state.updateIndexOfArrayElement();
 
             if (state.terminatedDocEvent != null &&
                     state.terminatedDocEvent.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
@@ -431,11 +435,14 @@ public class YamlParser {
             } else { // Obtain the stream end event
                 event = handleEvent(state, ANY_DOCUMENT);
             }
-            state.rootValueInitialized = false;
-            state.handleExpectedType(peek);
         }
 
-        return ValueCreator.createArrayValue(output.toArray(), PredefinedTypes.TYPE_ANYDATA_ARRAY);
+        state.unionDepth = prevUnionDepth;
+        if (state.unionDepth == 1) {
+            state.unionDepth--;
+            return handleOutput(state, state.verifyAndConvertToUnion(state.currentYamlNode));
+        }
+        return handleOutput(state, state.currentYamlNode);
     }
 
     private static Object composeNode(ComposerState state, YamlEvent event, boolean mapOrSequenceScalar)
