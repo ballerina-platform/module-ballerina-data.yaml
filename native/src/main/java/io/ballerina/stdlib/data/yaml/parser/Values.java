@@ -270,6 +270,13 @@ public class Values {
                 nextMapValue = ValueCreator.createMapValue(ANYDATA_MAP_TYPE);
                 state.updateFieldHierarchiesAndRestType(new HashMap<>(), currentType);
             }
+            case TypeTags.INTERSECTION_TAG -> {
+                Optional<Type> mutableType = getMutableType((IntersectionType) currentType);
+                if (mutableType.isEmpty()) {
+                    throw DiagnosticLog.error(DiagnosticErrorCode.INVALID_TYPE, currentType, "map type");
+                }
+                return checkTypeAndCreateMappingValue(state, mutableType.get(), parentContext);
+            }
             case TypeTags.UNION_TAG -> {
                 nextMapValue = ValueCreator.createMapValue(JSON_MAP_TYPE);
                 state.parserContexts.push(YamlParser.ParserContext.MAP);
@@ -284,6 +291,16 @@ public class Values {
             }
         }
         return nextMapValue;
+    }
+
+    static Optional<Type> getMutableType(IntersectionType intersectionType) {
+        for (Type constituentType : intersectionType.getConstituentTypes()) {
+            if (constituentType.getTag() == TypeTags.READONLY_TAG) {
+                continue;
+            }
+            return Optional.of(constituentType);
+        }
+        return Optional.empty();
     }
 
     static Type getMemberType(Type expectedType, int index, boolean allowDataProjection) {
@@ -528,6 +545,13 @@ public class Values {
 
         Object currentYamlNode = state.currentYamlNode;
         Type expType = TypeUtils.getReferredType(state.expectedTypes.peek());
+        if (expType.getTag() == TypeTags.INTERSECTION_TAG) {
+            Optional<Type> type = getMutableType((IntersectionType) expType);
+            if (type.isEmpty()) {
+                throw DiagnosticLog.error(DiagnosticErrorCode.INVALID_TYPE, expType, "array type");
+            }
+            expType = type.get();
+        }
         BArray nextArrValue = initArrayValue(state, expType);
         if (currentYamlNode == null) {
             return Optional.ofNullable(nextArrValue);

@@ -74,11 +74,13 @@ public enum YAMLSchema {
 # + schema - field description  
 # + allowAnchorRedefinition - field description  
 # + allowMapEntryRedefinition - field description
+# + isStream - If set, the parser reads a stream of YAML documents
 # + allowDataProjection - Enable or disable projection
 public type Options record {|
     YAMLSchema schema = CORE_SCHEMA;
     boolean allowAnchorRedefinition = true;
     boolean allowMapEntryRedefinition = false;
+    boolean isStream = false;
     record {
         # If `true`, nil values will be considered as optional fields in the projection.
         boolean nilAsOptionalField = false;

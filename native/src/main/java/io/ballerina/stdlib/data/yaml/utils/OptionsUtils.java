@@ -27,7 +27,7 @@ public class OptionsUtils {
 
     public record ReadConfig(Types.YAMLSchema schema, boolean allowAnchorRedefinition,
                              boolean allowMapEntryRedefinition, boolean allowDataProjection,
-                             boolean nilAsOptionalField, boolean absentAsNilableType) {
+                             boolean nilAsOptionalField, boolean absentAsNilableType, boolean isStream) {
     }
 
     public static ReadConfig resolveReadConfig(BMap<BString, Object> options) {
@@ -35,15 +35,17 @@ public class OptionsUtils {
         Object allowAnchorRedefinition = options.get(Constants.ALLOW_ANCHOR_REDEFINITION);
         Object allowMapEntryRedefinition = options.get(Constants.ALLOW_MAP_ENTRY_REDEFINITION);
         Object allowDataProjection = options.get(Constants.ALLOW_DATA_PROJECTION);
+        Object isStream = options.get(Constants.IS_STREAM);
         if (allowDataProjection instanceof Boolean) {
             return new ReadConfig(Types.YAMLSchema.valueOf(((BString) schema).getValue()),
-                    ((Boolean) allowAnchorRedefinition), ((Boolean) allowMapEntryRedefinition), false, false, false);
+                    ((Boolean) allowAnchorRedefinition), ((Boolean) allowMapEntryRedefinition),
+                    false, false, false, ((Boolean) isStream));
         }
         Object nilAsOptionalField = ((BMap<?, ?>) allowDataProjection).get(Constants.NIL_AS_OPTIONAL_FIELD);
         Object absentAsNilableType = ((BMap<?, ?>) allowDataProjection).get(Constants.ABSENT_AS_NILABLE_TYPE);
 
         return new ReadConfig(Types.YAMLSchema.valueOf(((BString) schema).getValue()),
                 ((Boolean) allowAnchorRedefinition), ((Boolean) allowMapEntryRedefinition), true,
-                ((Boolean) nilAsOptionalField), ((Boolean) absentAsNilableType));
+                ((Boolean) nilAsOptionalField), ((Boolean) absentAsNilableType), ((Boolean) isStream));
     }
 }
