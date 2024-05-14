@@ -1,0 +1,29 @@
+title: The Great Gatsby
+author: F. Scott Fitzgerald
+genres:
+- Classic
+- Fiction
+copiesAvailable: 3
+---
+title: 1984
+author: George Orwell
+genres:
+- Dystopian
+- Science Fiction
+copiesAvailable: 5
+---
+title: Dune
+author: Frank Herbert
+genres:
+- Science Fiction
+- Adventure
+yearPublished: 1965
+isAvailableInEbook: true
+---
+title: And Then There Were None
+author: Agatha Christie
+genres:
+- Mystery
+- Thriller
+firstPublished: 1939
+isPartOfSeries: true

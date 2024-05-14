@@ -166,7 +166,7 @@ public class Emitter {
 
             if (event.getKind() == YamlEvent.EventKind.SCALAR_EVENT) {
                 YamlEvent.ScalarEvent scalarEvent = (YamlEvent.ScalarEvent) event;
-                line += whitespace + writeNode(state, scalarEvent.getValue(), event.getTag());
+                line += writeNode(state, scalarEvent.getValue(), event.getTag());
                 state.addLine(line);
             }
 
@@ -212,7 +212,7 @@ public class Emitter {
 
             if (event.getKind() == YamlEvent.EventKind.SCALAR_EVENT) {
                 YamlEvent.ScalarEvent scalarEvent = (YamlEvent.ScalarEvent) event;
-                line.append(writeNode(state, scalarEvent.getValue(), event.getTag()) + ": ");
+                line.append(writeNode(state, scalarEvent.getValue(), event.getTag())).append(": ");
             }
 
             event = Utils.getEvent(state);
@@ -257,7 +257,7 @@ public class Emitter {
 
             if (event.getKind() == YamlEvent.EventKind.SCALAR_EVENT) {
                 YamlEvent.ScalarEvent scalarEvent = (YamlEvent.ScalarEvent) event;
-                state.addLine(whitespace + "-" + writeNode(state, scalarEvent.getValue(), event.getTag()));
+                state.addLine(whitespace + "- " + writeNode(state, scalarEvent.getValue(), event.getTag()));
             }
 
             if (event.getKind() == YamlEvent.EventKind.START_EVENT) {

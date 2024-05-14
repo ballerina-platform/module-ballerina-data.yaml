@@ -50,12 +50,12 @@ public isolated function parseStream(stream<byte[], error?> s,
 # + yamlValue - Input yaml value
 # + config - Options used to get desired toString representation
 # + return - On success, returns to string value, else returns an `yaml:Error`
-public isolated function toYamlString(anydata yamlValue, WriteConfig config) returns string|Error {
+public isolated function toYamlString(anydata yamlValue, WriteConfig config = {}) returns string|Error {
     string[] lines = check toYamlStringArray(yamlValue, config);
     return "\n".'join(...lines);
 }
 
-isolated function toYamlStringArray(anydata yamlValue, WriteConfig config)
+isolated function toYamlStringArray(anydata yamlValue, WriteConfig config = {})
     returns string[]|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
 
 # Represents the YAML schema available for the parser.
