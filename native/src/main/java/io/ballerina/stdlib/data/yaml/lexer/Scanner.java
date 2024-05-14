@@ -487,6 +487,12 @@ public class Scanner {
         int currentChar = sm.peek();
 
         // Process double escape character
+        if (LINE_BREAK_PATTERN.pattern(currentChar)) {
+            sm.forward();
+            processEscapedWhiteSpaces(sm);
+            return;
+        }
+
         if (currentChar == -1) {
             sm.appendToLexeme("\\");
             return;
@@ -514,5 +520,11 @@ public class Scanner {
             }
         }
         throw new Error.YamlParserException("invalid escape character", sm.getLine(), sm.getColumn());
+    }
+
+    private static void processEscapedWhiteSpaces(LexerState sm) {
+        while (WHITE_SPACE_PATTERN.pattern(sm.peek(1))) {
+            sm.forward();
+        }
     }
 }
