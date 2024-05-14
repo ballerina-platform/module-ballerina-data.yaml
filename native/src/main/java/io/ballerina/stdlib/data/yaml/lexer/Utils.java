@@ -214,7 +214,7 @@ public class Utils {
 
     public static String getWhitespace(LexerState sm) {
         StringBuilder whitespace = new StringBuilder();
-        while (sm.getColumn() < sm.getRemainingBufferedSize()) {
+        while (true) {
             if (sm.peek() == ' ') {
                 whitespace.append(" ");
             } else if (sm.peek() == '\t') {

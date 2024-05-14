@@ -392,7 +392,7 @@ public class LexerState {
                     // Return block sequence entry
                     lexerState.forward();
                     lexerState.tokenize(SEQUENCE_ENTRY);
-                    lexerState.indentation = IndentUtils.handleIndent(lexerState, -1);
+                    lexerState.indentation = IndentUtils.handleIndent(lexerState);
                     return this;
                 }
                 case '*' -> {

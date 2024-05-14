@@ -81,7 +81,7 @@ public class Scanner {
      */
     public static void iterate(LexerState sm, Scan scan, Token.TokenType token, boolean include)
             throws Error.YamlParserException {
-        while (sm.getColumn() < sm.getRemainingBufferedSize()) {
+        while (true) {
             if (scan.scan(sm)) {
                 if (include && sm.peek() != '\n') {
                     sm.forward();

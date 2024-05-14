@@ -120,12 +120,15 @@ public class IndentUtils {
         }
     }
 
+    public static Indentation handleIndent(LexerState sm) throws Error.YamlParserException {
+        return handleIndent(sm, null);
+    }
     /** Validate the indentation of block collections.
      */
-    public static Indentation handleIndent(LexerState sm, int mapIndex) throws Error.YamlParserException {
-        int startIndex = mapIndex == -1 ? sm.getColumn() - 1 : mapIndex;
+    public static Indentation handleIndent(LexerState sm, Integer mapIndex) throws Error.YamlParserException {
+        int startIndex = mapIndex == null ? sm.getColumn() - 1 : mapIndex;
 
-        if (mapIndex != -1) {
+        if (mapIndex != null) {
             sm.setKeyDefinedForLine(true);
         }
 
@@ -133,9 +136,10 @@ public class IndentUtils {
             throw new Error.YamlParserException("cannot have tab as an indentation", sm.getLine(), sm.getColumn());
         }
 
-        Collection collection = mapIndex == -1 ? Collection.SEQUENCE : Collection.MAPPING;
+        Collection collection = mapIndex == null ? Collection.SEQUENCE : Collection.MAPPING;
 
-        if (sm.getIndent() > startIndex) {
+        if (sm.getIndent() == startIndex) {
+
             List<Collection> existingIndentType = sm.getIndents().stream()
                     .filter(indent -> indent.getColumn() == startIndex)
                     .map(Indent::getCollection)
@@ -154,14 +158,6 @@ public class IndentUtils {
                             "same indent as a block sequence", sm.getLine(), sm.getColumn());
                 }
             }
-        }
-
-        if (sm.getIndent() == startIndex) {
-
-            List<Collection> existingIndentType = sm.getIndents().stream()
-                    .filter(indent -> indent.getColumn() == startIndex)
-                    .map(Indent::getCollection)
-                    .toList();
 
             // The current token is a sequence entry and a mapping key exists for the indent
             if (collection == Collection.SEQUENCE
@@ -192,6 +188,23 @@ public class IndentUtils {
                     Indentation.IndentationChange.INDENT_INCREASE,
                     new ArrayList<>(Collections.singleton(collection)),
                     sm.getClonedTokensForMappingValue());
+        }
+
+        if (sm.getIndent() > startIndex) {
+
+            List<Collection> existingIndentType = sm.getIndents().stream()
+                    .filter(indent -> indent.getColumn() == startIndex)
+                    .map(Indent::getCollection)
+                    .toList();
+
+            // The current token is a mapping key and a sequence entry exists for the indent
+            if (collection == Collection.MAPPING
+                    && existingIndentType.contains(Collection.SEQUENCE)) {
+                if (!existingIndentType.contains(Collection.MAPPING)) {
+                    throw new Error.YamlParserException("block mapping cannot have the " +
+                            "same indent as a block sequence", sm.getLine(), sm.getColumn());
+                }
+            }
         }
 
         Indent removedIndent = null;
