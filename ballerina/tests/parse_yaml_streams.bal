@@ -35,6 +35,58 @@ isolated function testYamlStringParsing2() returns error? {
     test:assertEquals(result[1].data, configMapValue.data);
 }
 
+@test:Config
+isolated function testYamlStringParsing3() returns error? {
+    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    ExpectedType result = check parseStream(streamResult, {isStream: true});
+
+    final ConfigType configMapValue = {
+        "apiVersion": "v1",
+        "kind": "ConfigMap",
+        "metadata": {"name": "ballerina-mongodb-configmap"},
+        "data": {
+            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" + 
+                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" + 
+                            "\ndbName = \"students\"\n\n[ballerina.log]\nlevel = \"DEBUG\"\n"
+        }
+    };
+
+    test:assertEquals(result.length(), 2);
+    test:assertEquals(result[1].apiVersion, configMapValue.apiVersion);
+    test:assertEquals(result[1].kind, configMapValue.kind);
+    test:assertEquals(result[1].metadata, configMapValue.metadata);
+    test:assertEquals((<ConfigType>result[1]).data, configMapValue.data);
+}
+
+@test:Config
+isolated function testYamlStringParsing4() returns error? {
+    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    UnionType[] result = check parseStream(streamResult, {isStream: true});
+
+    final ConfigType configMapValue = {
+        "apiVersion": "v1",
+        "kind": "ConfigMap",
+        "metadata": {"name": "ballerina-mongodb-configmap"},
+        "data": {
+            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" + 
+                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" + 
+                            "\ndbName = \"students\"\n\n[ballerina.log]\nlevel = \"DEBUG\"\n"
+        }
+    };
+
+    test:assertEquals(result.length(), 4);
+    test:assertEquals(result[1].apiVersion, configMapValue.apiVersion);
+    test:assertEquals(result[1].kind, configMapValue.kind);
+    test:assertEquals(result[1].metadata, configMapValue.metadata);
+    test:assertEquals((<ConfigType>result[1]).data, configMapValue.data);
+}
+
+type ExpectedType UnionType[2];
+
+type UnionType ServiceType|ConfigType|DeploymentType;
+
 type ServiceType record {|
     string apiVersion;
     string kind;
