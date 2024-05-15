@@ -103,6 +103,7 @@ public class YamlParser {
         final boolean nilAsOptionalField;
         final boolean absentAsNilableType;
         boolean expectedTypeIsReadonly = false;
+        boolean isStream = false;
 
         public ComposerState(ParserState parserState, OptionsUtils.ReadConfig readConfig) {
             this.parserState = parserState;
@@ -112,6 +113,7 @@ public class YamlParser {
             this.allowDataProjection = readConfig.allowDataProjection();
             this.nilAsOptionalField = readConfig.nilAsOptionalField();
             this.absentAsNilableType = readConfig.absentAsNilableType();
+            this.isStream = readConfig.isStream();
         }
 
         public int getLine() {
@@ -308,7 +310,17 @@ public class YamlParser {
                     expectedTypes.add(recordType);
                     updateFieldHierarchiesAndRestType(getAllFieldsInRecord(recordType), recordType.getRestFieldType());
                 }
-                case TypeTags.ARRAY_TAG, TypeTags.TUPLE_TAG -> {
+                case TypeTags.ARRAY_TAG -> {
+                    expectedTypes.add(type);
+                    arrayIndexes.push(0);
+                    if (isStream) {
+                        Type elementType = TypeUtils.getReferredType(((ArrayType) type).getElementType());
+                        if (elementType.getTag() == TypeTags.UNION_TAG) {
+                            expectedTypes.add(elementType);
+                        }
+                    }
+                }
+                case TypeTags.TUPLE_TAG -> {
                     expectedTypes.add(type);
                     arrayIndexes.push(0);
                 }
@@ -408,12 +420,21 @@ public class YamlParser {
         state.rootValueInitialized = true;
 
         int prevUnionDepth = state.unionDepth;
-        state.unionDepth = 0;
+        boolean hasUnionElementMember = false;
+        if (state.expectedTypes.size() > 1) {
+            hasUnionElementMember = true;
+        } else {
+            state.unionDepth = 0;
+        }
 
         // Iterate all the documents
         while (!(event.getKind() == YamlEvent.EventKind.END_EVENT
                 && ((YamlEvent.EndEvent) event).getEndType() == STREAM)) {
-            Values.updateExpectedType(state);
+            if (hasUnionElementMember) {
+                Values.updateExpectedTypeForStreamDocument(state);
+            } else {
+                Values.updateExpectedType(state);
+            }
             composeDocument(state, event);
             state.updateIndexOfArrayElement();
 
@@ -440,6 +461,9 @@ public class YamlParser {
         state.unionDepth = prevUnionDepth;
         if (state.unionDepth == 1) {
             state.unionDepth--;
+            if (hasUnionElementMember) {
+                state.expectedTypes.pop();
+            }
             return handleOutput(state, state.verifyAndConvertToUnion(state.currentYamlNode));
         }
         return handleOutput(state, state.currentYamlNode);

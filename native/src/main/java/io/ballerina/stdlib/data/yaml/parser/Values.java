@@ -334,6 +334,25 @@ public class Values {
         return expectedType;
     }
 
+    static Type getMemberTypeForStreamsWithUnion(Type expectedType, int index) {
+        if (expectedType == null) {
+            return null;
+        }
+
+        if (expectedType.getTag() == TypeTags.ARRAY_TAG) {
+            ArrayType arrayType = (ArrayType) expectedType;
+            return arrayType.getElementType();
+        } else if (expectedType.getTag() == TypeTags.TUPLE_TAG) {
+            TupleType tupleType = (TupleType) expectedType;
+            List<Type> tupleTypes = tupleType.getTupleTypes();
+            if (tupleTypes.size() < index + 1) {
+                return tupleType.getRestType();
+            }
+            return tupleTypes.get(index);
+        }
+        return expectedType;
+    }
+
     public static Object fromStringWithType(BString string, Type expType) {
         String value = string.getValue();
         return switch (expType.getTag()) {
@@ -497,14 +516,7 @@ public class Values {
 
     static void updateNextMapValue(YamlParser.ComposerState state) {
         Object currentYamlNode = state.currentYamlNode;
-        Type currentYamlNodeType = TypeUtils.getType(currentYamlNode);
         Type expType = state.expectedTypes.peek();
-        if (currentYamlNodeType.getTag() == TypeTags.ARRAY_TAG) {
-            ArrayType arrayType = (ArrayType) currentYamlNodeType;
-            if (arrayType.getState() != ArrayType.ArrayState.CLOSED || expType != null) {
-                expType = ((ArrayType) currentYamlNodeType).getElementType();
-            }
-        }
 
         Optional<BMap<BString, Object>> nextMap = initNewMapValue(state, expType);
         if (nextMap.isPresent()) {
@@ -521,6 +533,14 @@ public class Values {
         }
         state.expectedTypes.push(getMemberType(state.expectedTypes.peek(),
                 state.arrayIndexes.peek(), state.allowDataProjection));
+    }
+
+    static void updateExpectedTypeForStreamDocument(YamlParser.ComposerState state) {
+        if (state.unionDepth > 0) {
+            return;
+        }
+        state.expectedTypes.push(getMemberTypeForStreamsWithUnion(state.expectedTypes.peek(),
+                state.arrayIndexes.peek()));
     }
 
     static void updateNextMapValueBasedOnExpType(YamlParser.ComposerState state) {
