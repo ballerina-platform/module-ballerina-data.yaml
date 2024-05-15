@@ -110,3 +110,4 @@ build.dependsOn ":${packageName}-compiler-plugin:build"
 build.dependsOn deleteDependencyTomlFiles
 
 test.dependsOn ":${packageName}-native:build"
+test.dependsOn ":${packageName}-compiler-plugin:build"

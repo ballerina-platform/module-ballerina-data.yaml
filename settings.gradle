@@ -45,12 +45,13 @@ include(':checkstyle')
 include(':data.yaml-native')
 include(':data.yaml-ballerina')
 include(':data.yaml-compiler-plugin')
+include(':data.yaml-compiler-plugin-tests')
 
 project(':checkstyle').projectDir = file("build-config${File.separator}checkstyle")
 project(':data.yaml-native').projectDir = file('native')
 project(':data.yaml-ballerina').projectDir = file('ballerina')
 project(':data.yaml-compiler-plugin').projectDir = file('compiler-plugin')
-
+project(':data.yaml-compiler-plugin-tests').projectDir = file('compiler-plugin-test')
 
 gradleEnterprise {
     buildScan {
@@ -58,3 +59,4 @@ gradleEnterprise {
         termsOfServiceAgree = 'yes'
     }
 }
+
