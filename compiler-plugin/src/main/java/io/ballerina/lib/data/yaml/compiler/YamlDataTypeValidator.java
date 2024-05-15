@@ -127,15 +127,39 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
                 continue;
             }
 
-            if (isParseFunctionOfStringSource(initializer.get())) {
-                currentLocation = variableDeclarationNode.typedBindingPattern().typeDescriptor().location();
-                Optional<Symbol> symbol = semanticModel.symbol(variableDeclarationNode.typedBindingPattern());
-                if (symbol.isEmpty()) {
-                    continue;
-                }
-                TypeSymbol typeSymbol = ((VariableSymbol) symbol.get()).typeDescriptor();
-                validateExpectedType(typeSymbol, ctx);
+            currentLocation = variableDeclarationNode.typedBindingPattern().typeDescriptor().location();
+            Optional<Symbol> symbol = semanticModel.symbol(variableDeclarationNode.typedBindingPattern());
+            if (symbol.isEmpty()) {
+                continue;
             }
+
+            TypeSymbol typeSymbol = ((VariableSymbol) symbol.get()).typeDescriptor();
+            if (!isParseFunctionOfStringSource(initializer.get())) {
+                checkTypeAndDetectDuplicateFields(typeSymbol, ctx);
+                continue;
+            }
+
+            validateExpectedType(typeSymbol, ctx);
+        }
+    }
+
+    private void checkTypeAndDetectDuplicateFields(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext ctx) {
+        switch (typeSymbol.typeKind()) {
+            case RECORD -> detectDuplicateFields((RecordTypeSymbol) typeSymbol, ctx);
+            case ARRAY -> checkTypeAndDetectDuplicateFields(((ArrayTypeSymbol) typeSymbol).memberTypeDescriptor(), ctx);
+            case TUPLE -> {
+                for (TypeSymbol memberType : ((TupleTypeSymbol) typeSymbol).memberTypeDescriptors()) {
+                    checkTypeAndDetectDuplicateFields(memberType, ctx);
+                }
+            }
+            case UNION -> {
+                for (TypeSymbol memberType : ((UnionTypeSymbol) typeSymbol).memberTypeDescriptors()) {
+                    checkTypeAndDetectDuplicateFields(memberType, ctx);
+                }
+            }
+            case TYPE_REFERENCE -> checkTypeAndDetectDuplicateFields(
+                    ((TypeReferenceTypeSymbol) typeSymbol).typeDescriptor(), ctx);
+            case INTERSECTION -> checkTypeAndDetectDuplicateFields(getRawType(typeSymbol), ctx);
         }
     }
 
