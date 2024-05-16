@@ -23,6 +23,11 @@ import io.ballerina.stdlib.data.yaml.parser.YamlParser;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Resolve tagged values and create BValues.
+ *
+ * @since 0.1.0
+ */
 public class TagResolutionUtils {
 
     public static Object constructSimpleNull(String value, YamlParser.ComposerState state)

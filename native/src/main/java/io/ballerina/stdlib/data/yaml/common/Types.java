@@ -18,13 +18,12 @@
 
 package io.ballerina.stdlib.data.yaml.common;
 
+/**
+ * Define basic types and schemas in YAML files.
+ *
+ * @since 0.1.0
+ */
 public class Types {
-
-    public static final String DEFAULT_LOCAL_TAG_HANDLE = "!";
-    public static final String DEFAULT_GLOBAL_TAG_HANDLE = "tag:yaml.org,2002:";
-    public static final String DEFAULT_GLOBAL_SEQ_TAG_HANDLE = DEFAULT_GLOBAL_TAG_HANDLE + "seq";
-    public static final String DEFAULT_GLOBAL_MAP_TAG_HANDLE = DEFAULT_GLOBAL_TAG_HANDLE + "map";
-    public static final String DEFAULT_GLOBAL_STR_TAG_HANDLE = DEFAULT_GLOBAL_TAG_HANDLE + "str";
 
     public enum Collection {
         STREAM,
@@ -42,5 +41,11 @@ public class Types {
         FAILSAFE_SCHEMA,
         JSON_SCHEMA,
         CORE_SCHEMA
+    }
+
+    public enum DocumentType {
+        ANY_DOCUMENT,
+        BARE_DOCUMENT,
+        DIRECTIVE_DOCUMENT
     }
 }

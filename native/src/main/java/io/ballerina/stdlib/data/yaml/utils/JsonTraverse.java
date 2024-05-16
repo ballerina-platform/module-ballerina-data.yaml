@@ -47,6 +47,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Stack;
 
+/**
+ * Traverse json tree.
+ *
+ * @since 0.1.0
+ */
 public class JsonTraverse {
 
     private static final ThreadLocal<JsonTree> tlJsonTree = ThreadLocal.withInitial(JsonTree::new);

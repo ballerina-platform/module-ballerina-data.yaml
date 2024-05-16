@@ -26,6 +26,11 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.Arrays;
 
+/**
+ * Read and Consume input stream.
+ *
+ * @since 0.1.0
+ */
 public class CharacterReader {
     private final Reader reader;
     private final char[] buff; // data chucks are read into this buffer
@@ -36,15 +41,11 @@ public class CharacterReader {
     private boolean eof = false; // flag saying end of the stream reached
     private int line = 1; // current line number
     private int column = 0; // current column number
-    private int index = 0; // current index from the beginning of the stream
-    private int documentIndex = 0; // current index with in the current document
-    private boolean lastCharConsumed = false;
 
     public CharacterReader(Reader reader) {
         this.reader = reader;
         this.dataBuffer = new int[0];
         this.buff = new char[1024];
-
     }
 
     /**
@@ -78,7 +79,6 @@ public class CharacterReader {
         int i;
         for (i = 0; i < k && checkAndReadData(k); i++) {
             int codePoint = dataBuffer[pointer++];
-            updateIndex(1);
             if (hasNewLine(codePoint)) {
                 this.remainingBufferedSize -= column + 1;
                 this.column = 0;
@@ -88,11 +88,6 @@ public class CharacterReader {
             }
         }
         return i == 0;
-    }
-
-    private void updateIndex(int size) {
-        this.index += size;
-        this.documentIndex += size;
     }
 
     private boolean hasNewLine(int codePoint) {

@@ -25,6 +25,11 @@ import io.ballerina.stdlib.data.yaml.utils.Error;
 
 import java.util.List;
 
+/**
+ * This class will hold utility functions to process directives.
+ *
+ * @since 0.1.0
+ */
 public class Directive {
 
     /**

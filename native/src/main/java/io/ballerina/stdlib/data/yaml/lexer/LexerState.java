@@ -67,6 +67,11 @@ import static io.ballerina.stdlib.data.yaml.lexer.Utils.checkCharacters;
 import static io.ballerina.stdlib.data.yaml.lexer.Utils.discernPlanarFromIndicator;
 import static io.ballerina.stdlib.data.yaml.lexer.Utils.getWhitespace;
 
+/**
+ * State of the YAML Lexer.
+ *
+ * @since 0.1.0
+ */
 public class LexerState {
 
     public static final State LEXER_START_STATE = new StartState();
@@ -79,22 +84,20 @@ public class LexerState {
     public static final State LEXER_BLOCK_HEADER = new BlockHeaderState();
     public static final State LEXER_LITERAL = new LiteralState();
     public static final State LEXER_RESERVED_DIRECTIVE = new ReservedDirectiveState();
-
     private State state = LEXER_START_STATE;
-    private CharacterReader characterReader;
+    private final CharacterReader characterReader;
     private Token.TokenType token = null;
     private String lexeme = "";
     private String lexemeBuffer = "";
-    private Indentation indentation = null;
+    private IndentUtils.Indentation indentation = null;
     private int tabInWhitespace  = -1;
     private int numOpenedFlowCollections = 0;
-    // Minimum indentation required to the current line
     private int indent = -1;
     private int indentStartIndex = -1;
     private boolean indentationBreak = false;
     private boolean enforceMapping = false;
     private boolean keyDefinedForLine = false;
-    private Stack<Indent> indents = new Stack<>();
+    private Stack<IndentUtils.Indent> indents = new Stack<>();
     private List<Token.TokenType> tokensForMappingValue = new ArrayList<>();
     private boolean isJsonKey = false;
     private int mappingKeyColumn = -1;
@@ -157,7 +160,7 @@ public class LexerState {
         token = Token.TokenType.DUMMY;
         String lexemeBuffer = lexeme;
         lexeme = "";
-        Indentation indentationBuffer = indentation;
+        IndentUtils.Indentation indentationBuffer = indentation;
         indentation = null;
         return new Token(tokenBuffer, lexemeBuffer, indentationBuffer);
     }
@@ -182,11 +185,7 @@ public class LexerState {
     }
 
     public int getColumn() {
-        return characterReader.getColumn(); // TODO: need to handle this index vs column
-    }
-
-    public int dataBufferSize() {
-        return characterReader.getDataBufferSize();
+        return characterReader.getColumn();
     }
 
     public int getRemainingBufferedSize() {
@@ -237,7 +236,7 @@ public class LexerState {
         this.keyDefinedForLine = keyDefinedForLine;
     }
 
-    public Stack<Indent> getIndents() {
+    public Stack<IndentUtils.Indent> getIndents() {
         return indents;
     }
 
@@ -245,7 +244,7 @@ public class LexerState {
         return List.copyOf(tokensForMappingValue);
     }
 
-    public void setIndentation(Indentation indentation) {
+    public void setIndentation(IndentUtils.Indentation indentation) {
         this.indentation = indentation;
     }
 
@@ -785,9 +784,6 @@ public class LexerState {
             // Terminating delimiter
             if (lexerState.peek() == '\"') {
                 IndentUtils.handleMappingValueIndent(lexerState, DOUBLE_QUOTE_DELIMITER);
-//                if (lexerState.peek(1) == -1) {
-//                    lexerState.setEofStream(true);
-//                }
                 return this;
             }
 
@@ -843,9 +839,6 @@ public class LexerState {
                     return this;
                 }
                 IndentUtils.handleMappingValueIndent(lexerState, SINGLE_QUOTE_DELIMITER);
-//                if (lexerState.peek(1) == -1) {
-//                    lexerState.setEofStream(true);
-//                }
                 return this;
             }
 

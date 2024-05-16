@@ -20,6 +20,11 @@ package io.ballerina.stdlib.data.yaml.common;
 
 import io.ballerina.stdlib.data.yaml.common.Types.Collection;
 
+/**
+ * Parser Events when parsing yaml data.
+ *
+ * @since 0.1.0
+ */
 public abstract class YamlEvent {
 
     private EventKind kind;

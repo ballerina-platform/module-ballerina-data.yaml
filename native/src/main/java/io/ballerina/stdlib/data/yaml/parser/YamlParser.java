@@ -37,7 +37,7 @@ import io.ballerina.runtime.api.values.BString;
 import io.ballerina.stdlib.data.yaml.common.Types;
 import io.ballerina.stdlib.data.yaml.common.Types.Collection;
 import io.ballerina.stdlib.data.yaml.common.YamlEvent;
-import io.ballerina.stdlib.data.yaml.lexer.Indentation;
+import io.ballerina.stdlib.data.yaml.lexer.IndentUtils;
 import io.ballerina.stdlib.data.yaml.lexer.LexerState;
 import io.ballerina.stdlib.data.yaml.lexer.Token;
 import io.ballerina.stdlib.data.yaml.lexer.YamlLexer;
@@ -54,14 +54,17 @@ import java.io.Reader;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
 import static io.ballerina.stdlib.data.yaml.common.Types.Collection.SEQUENCE;
 import static io.ballerina.stdlib.data.yaml.common.Types.Collection.STREAM;
-import static io.ballerina.stdlib.data.yaml.common.Types.DEFAULT_GLOBAL_TAG_HANDLE;
-import static io.ballerina.stdlib.data.yaml.common.Types.DEFAULT_LOCAL_TAG_HANDLE;
+import static io.ballerina.stdlib.data.yaml.common.Types.DocumentType.ANY_DOCUMENT;
+import static io.ballerina.stdlib.data.yaml.common.Types.DocumentType.BARE_DOCUMENT;
+import static io.ballerina.stdlib.data.yaml.common.Types.DocumentType.DIRECTIVE_DOCUMENT;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.ANCHOR;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.COMMENT;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DIRECTIVE;
@@ -83,15 +86,19 @@ import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.TAG;
 import static io.ballerina.stdlib.data.yaml.parser.Directive.reservedDirective;
 import static io.ballerina.stdlib.data.yaml.parser.Directive.tagDirective;
 import static io.ballerina.stdlib.data.yaml.parser.Directive.yamlDirective;
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.DocumentType.ANY_DOCUMENT;
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.DocumentType.BARE_DOCUMENT;
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.DocumentType.DIRECTIVE_DOCUMENT;
 import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_MAP_KEY;
 import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_MAP_VALUE;
 import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_SEQUENCE_ENTRY;
 import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_SEQUENCE_VALUE;
 import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.getAllFieldsInRecord;
+import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_GLOBAL_TAG_HANDLE;
+import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_LOCAL_TAG_HANDLE;
 
+/**
+ * Core parsing of YAML strings.
+ *
+ * @since 0.1.0
+ */
 public class YamlParser {
 
     public static final Map<String, String> DEFAULT_TAG_HANDLES = Map.of("!", DEFAULT_LOCAL_TAG_HANDLE,
@@ -393,7 +400,7 @@ public class YamlParser {
      */
     public static Object compose(Reader reader, BMap<BString, Object> options, Type expectedType) throws BError {
         OptionsUtils.ReadConfig readConfig = OptionsUtils.resolveReadConfig(options);
-        ComposerState composerState = new ComposerState(new ParserState(reader, expectedType), readConfig);
+        ComposerState composerState = new ComposerState(new ParserState(reader), readConfig);
         composerState.handleExpectedType(expectedType);
         try {
             return readConfig.isStream() ? composeStream(composerState) : composeDocument(composerState);
@@ -641,7 +648,7 @@ public class YamlParser {
         } else {
             Values.updateNextMapValueBasedOnExpType(state);
         }
-        Map<String, Object> structure = new HashMap<>();
+        Set<String> keys = new HashSet<>();
         YamlEvent event = handleEvent(state, EXPECT_MAP_KEY);
 
         // Iterate until an end event is detected
@@ -683,7 +690,7 @@ public class YamlParser {
             // Compose the key
             String key = (String) composeNode(state, event, true);
 
-            if (!state.allowMapEntryRedefinition && structure.containsKey(key.toString())) {
+            if (!state.allowMapEntryRedefinition && !keys.add(key)) {
                 throw new Error.YamlParserException("cannot have duplicate map entries for '${key.toString()}",
                         state.getLine(), state.getColumn());
             }
@@ -863,7 +870,7 @@ public class YamlParser {
      * @param docType - Document type to be parsed
      * @return - Parsed event
      */
-    private static YamlEvent handleEvent(ComposerState state, ParserUtils.DocumentType docType)
+    private static YamlEvent handleEvent(ComposerState state, Types.DocumentType docType)
             throws Error.YamlParserException {
         if (state.terminatedDocEvent != null &&
                 state.terminatedDocEvent.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
@@ -897,7 +904,7 @@ public class YamlParser {
      * @return - Parsed event
      */
     private static YamlEvent parse(ParserState state, ParserUtils.ParserOption option,
-                                     ParserUtils.DocumentType docType) throws Error.YamlParserException {
+                                     Types.DocumentType docType) throws Error.YamlParserException {
         // Empty the event buffer before getting new tokens
         final List<YamlEvent> eventBuffer = state.getEventBuffer();
 
@@ -935,7 +942,6 @@ public class YamlParser {
                 throw new Error.YamlParserException("'${state.currentToken.token}' " +
                         "is not allowed in a directive document", state.getLine(), state.getColumn());
             }
-            state.setDirectiveDocument(false);
         }
 
         switch (currentTokenType) {
@@ -952,8 +958,6 @@ public class YamlParser {
                     default -> reservedDirective(state);
                 }
                 getNextToken(state, List.of(SEPARATION_IN_LINE, EOL));
-
-                state.setDirectiveDocument(true);
                 return parse(state, ParserUtils.ParserOption.DEFAULT, DIRECTIVE_DOCUMENT);
             }
             case DOCUMENT_MARKER, DIRECTIVE_MARKER -> {
@@ -1003,9 +1007,9 @@ public class YamlParser {
                     }
                     return new YamlEvent.ScalarEvent();
                 } else {
-                    Indentation indentation = state.getCurrentToken().getIndentation();
+                    IndentUtils.Indentation indentation = state.getCurrentToken().getIndentation();
                     separate(state);
-                    switch (indentation.getChange()) {
+                    switch (indentation.change()) {
                         case INDENT_INCREASE -> { // Increase in indent
                             state.getEventBuffer().add(new YamlEvent.ScalarEvent());
                             return new YamlEvent.StartEvent(Collection.MAPPING);
@@ -1015,7 +1019,7 @@ public class YamlParser {
                         }
                         case INDENT_DECREASE -> { // Decrease in indent
 
-                            for (Collection collection: indentation.getCollection()) {
+                            for (Collection collection: indentation.collection()) {
                                 state.getEventBuffer().add(new YamlEvent.EndEvent(collection));
                             }
                             if (option == EXPECT_MAP_VALUE) {
@@ -1046,7 +1050,7 @@ public class YamlParser {
                             state.getLine(), state.getColumn());
                 }
 
-                switch (state.getCurrentToken().getIndentation().getChange()) {
+                switch (state.getCurrentToken().getIndentation().change()) {
                     case INDENT_INCREASE -> { // Increase in indent
                        return new YamlEvent.StartEvent(SEQUENCE);
                     }
@@ -1059,7 +1063,7 @@ public class YamlParser {
                         return event;
                     }
                     case INDENT_DECREASE -> { // Decrease in indent
-                        for (Collection collection: state.getCurrentToken().getIndentation().getCollection()) {
+                        for (Collection collection: state.getCurrentToken().getIndentation().collection()) {
                             state.getEventBuffer().add(new YamlEvent.EndEvent(collection));
                         }
                         return state.getEventBuffer().remove(0);
@@ -1334,7 +1338,7 @@ public class YamlParser {
             buffer = new YamlEvent.ScalarEvent();
         }
 
-        Indentation indentation = null;
+        IndentUtils.Indentation indentation = null;
         if (state.isExplicitKey()) {
             indentation = state.getCurrentToken().getIndentation();
             separate(state);
@@ -1360,12 +1364,12 @@ public class YamlParser {
         TagStructure newNodeTagStructure = new TagStructure();
         TagStructure currentNodeTagStructure = new TagStructure();
         if (indentation != null) {
-            switch (indentation.getTokens().size()) {
+            switch (indentation.tokens().size()) {
                 case 0 -> {
                     newNodeTagStructure = tagStructure;
                 }
                 case 1 -> {
-                    switch (indentation.getTokens().get(0)) {
+                    switch (indentation.tokens().get(0)) {
                         case ANCHOR -> {
                             if (isAlias && tagStructure.anchor != null) {
                                 throw new Error.YamlParserException("an alias node cannot have an anchor",
@@ -1478,9 +1482,9 @@ public class YamlParser {
             }
 
             if (explicitKey) {
-                Indentation peekedIndentation = state.getBufferedToken().getIndentation();
+                IndentUtils.Indentation peekedIndentation = state.getBufferedToken().getIndentation();
                 if (peekedIndentation != null
-                        && peekedIndentation.getChange() == Indentation.IndentationChange.INDENT_INCREASE
+                        && peekedIndentation.change() == IndentUtils.Indentation.IndentationChange.INDENT_INCREASE
                         && state.getBufferedToken().getType() != MAPPING_KEY) {
                     throw new Error.YamlParserException("invalid explicit key", state.getLine(), state.getColumn());
                 }
@@ -1488,24 +1492,24 @@ public class YamlParser {
         }
 
         if (indentation != null && !state.isIndentationProcessed()) {
-            int collectionSize = indentation.getCollection().size();
-            switch (indentation.getChange()) {
+            int collectionSize = indentation.collection().size();
+            switch (indentation.change()) {
                 case INDENT_INCREASE -> { // Increased
                     // Block sequence
                     if (event.getKind() == YamlEvent.EventKind.START_EVENT
                             && ((YamlEvent.StartEvent) event).getStartType() == SEQUENCE) {
                         return constructEvent(
-                                new YamlEvent.StartEvent(indentation.getCollection().remove(collectionSize - 1)),
+                                new YamlEvent.StartEvent(indentation.collection().remove(collectionSize - 1)),
                                 tagStructure);
                     }
                     // Block mapping
                     buffer = constructEvent(
-                            new YamlEvent.StartEvent(indentation.getCollection().remove(collectionSize - 1)),
+                            new YamlEvent.StartEvent(indentation.collection().remove(collectionSize - 1)),
                             newNodeTagStructure);
                 }
                 case INDENT_DECREASE -> { // Decreased
-                    buffer = new YamlEvent.EndEvent(indentation.getCollection().remove(0));
-                    for (Collection collection: indentation.getCollection()) {
+                    buffer = new YamlEvent.EndEvent(indentation.collection().remove(0));
+                    for (Collection collection: indentation.collection()) {
                         state.getEventBuffer().add(new YamlEvent.EndEvent(collection));
                     }
                 }
@@ -1583,7 +1587,7 @@ public class YamlParser {
                             state.getLine(), state.getColumn());
                 }
 
-                switch (state.getCurrentToken().getIndentation().getChange()) {
+                switch (state.getCurrentToken().getIndentation().change()) {
                     case INDENT_INCREASE -> {
                         return new YamlEvent.StartEvent(SEQUENCE);
                     }
@@ -1592,7 +1596,7 @@ public class YamlParser {
                     }
                     case INDENT_DECREASE -> {
                         state.setIndentationProcessed(true);
-                        for (Collection collection: state.getCurrentToken().getIndentation().getCollection()) {
+                        for (Collection collection: state.getCurrentToken().getIndentation().collection()) {
                             state.getEventBuffer().add(new YamlEvent.EndEvent(collection));
                         }
                         return constructEvent(new YamlEvent.ScalarEvent(), tagStructure);
@@ -1734,7 +1738,7 @@ public class YamlParser {
                     Token.TokenType bufferedTokenType = state.getBufferedToken().getType();
                     while (bufferedTokenType == EOL || bufferedTokenType == EMPTY_LINE) {
                         // Terminate at the end of the line
-                        if (state.getLineIndex() == state.getNumLines() - 1) {
+                        if (state.getLexerState().isEndOfStream()) {
                             break;
                         }
                         state.initLexer();
@@ -1968,15 +1972,15 @@ public class YamlParser {
         }
 
         state.setEmptyKey(true);
-        Indentation indentation = bufferedToken.getIndentation();
-        switch (indentation.getChange()) {
+        IndentUtils.Indentation indentation = bufferedToken.getIndentation();
+        switch (indentation.change()) {
             case INDENT_INCREASE -> {
-                int collectionSize = indentation.getCollection().size();
+                int collectionSize = indentation.collection().size();
                 state.getEventBuffer().add(
-                        new YamlEvent.StartEvent(indentation.getCollection().remove(collectionSize - 1)));
+                        new YamlEvent.StartEvent(indentation.collection().remove(collectionSize - 1)));
             }
             case INDENT_DECREASE -> {
-                for (Collection collection: indentation.getCollection()) {
+                for (Collection collection: indentation.collection()) {
                     state.getEventBuffer().add(new YamlEvent.EndEvent(collection));
                 }
             }
@@ -2148,7 +2152,6 @@ public class YamlParser {
 
         // Obtain a token form the lexer if there is none in the buffer.
         if (state.getBufferedToken().getType() == Token.TokenType.DUMMY) {
-            state.setPrevToken(state.getCurrentToken().getType());
             state.updateLexerState(YamlLexer.scanTokens(state.getLexerState()));
             token = state.getLexerState().getToken();
         } else {

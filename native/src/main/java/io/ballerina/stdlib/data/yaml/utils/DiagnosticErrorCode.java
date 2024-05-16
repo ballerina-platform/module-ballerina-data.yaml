@@ -18,6 +18,11 @@
 
 package io.ballerina.stdlib.data.yaml.utils;
 
+/**
+ * Represents a diagnostic error code.
+ *
+ * @since 0.1.0
+ */
 public enum DiagnosticErrorCode {
 
     UNSUPPORTED_TYPE("YAML_ERROR_001", "unsupported.type"),

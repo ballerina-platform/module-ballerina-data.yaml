@@ -29,6 +29,15 @@ import io.ballerina.stdlib.data.yaml.common.YamlEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_GLOBAL_MAP_TAG_HANDLE;
+import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_GLOBAL_SEQ_TAG_HANDLE;
+import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_GLOBAL_STR_TAG_HANDLE;
+
+/**
+ * Converts a Ballerina value to stream of YAML events.
+ *
+ * @since 0.1.0
+ */
 public class Serializer {
 
     public static class SerializerState {
@@ -62,11 +71,11 @@ public class Serializer {
         if (value instanceof BValue) {
             int typeTag = ((BValue) value).getType().getTag();
             if (typeTag == TypeTags.ARRAY_TAG || typeTag == TypeTags.TUPLE_TAG) {
-                serializeSequence(state, ((BArray) value), Types.DEFAULT_GLOBAL_SEQ_TAG_HANDLE, depthLevel);
+                serializeSequence(state, ((BArray) value), depthLevel);
                 return;
             } else if (typeTag == TypeTags.MAP_TAG || typeTag == TypeTags.RECORD_TYPE_TAG) {
                 serializeMapping(state, ((BMap<BString, Object>) value),
-                        Types.DEFAULT_GLOBAL_MAP_TAG_HANDLE, depthLevel);
+                        depthLevel);
                 return;
             }
         }
@@ -82,38 +91,38 @@ public class Serializer {
         }
 
         YamlEvent scalarEvent = new YamlEvent.ScalarEvent(value);
-        scalarEvent.setTag(Types.DEFAULT_GLOBAL_STR_TAG_HANDLE);
+        scalarEvent.setTag(DEFAULT_GLOBAL_STR_TAG_HANDLE);
         state.events.add(scalarEvent);
     }
 
-    private static void serializeSequence(SerializerState state, BArray data, String tag, int depthLevel) {
+    private static void serializeSequence(SerializerState state, BArray data, int depthLevel) {
         if (state.isStream) {
             state.isStream = false;
             for (int i = 0; i < data.size(); i++) {
-                serialize(state, data.get(i), depthLevel + 1, tag);
+                serialize(state, data.get(i), depthLevel + 1, DEFAULT_GLOBAL_SEQ_TAG_HANDLE);
             }
         } else {
             YamlEvent startEvent = new YamlEvent.StartEvent(Types.Collection.SEQUENCE,
                     state.flowStyle, false);
-            startEvent.setTag(tag);
+            startEvent.setTag(DEFAULT_GLOBAL_SEQ_TAG_HANDLE);
             state.events.add(startEvent);
 
             for (int i = 0; i < data.size(); i++) {
-                serialize(state, data.get(i), depthLevel + 1, tag);
+                serialize(state, data.get(i), depthLevel + 1, DEFAULT_GLOBAL_SEQ_TAG_HANDLE);
             }
 
             state.events.add(new YamlEvent.EndEvent(Types.Collection.SEQUENCE));
         }
     }
 
-    private static void serializeMapping(SerializerState state, BMap<BString, Object> bMap, String tag,
+    private static void serializeMapping(SerializerState state, BMap<BString, Object> bMap,
                                          int depthLevel) {
         state.events.add(new YamlEvent.StartEvent(Types.Collection.MAPPING, state.flowStyle, false));
 
         BString[] keys = bMap.getKeys();
         for (BString key: keys) {
-            serialize(state, key, depthLevel, tag);
-            serialize(state, bMap.get(key), depthLevel + 1, tag);
+            serialize(state, key, depthLevel, DEFAULT_GLOBAL_MAP_TAG_HANDLE);
+            serialize(state, bMap.get(key), depthLevel + 1, DEFAULT_GLOBAL_MAP_TAG_HANDLE);
         }
 
         state.events.add(new YamlEvent.EndEvent(Types.Collection.MAPPING));

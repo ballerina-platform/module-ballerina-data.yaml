@@ -26,6 +26,11 @@ import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.TAG;
 import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.EOL;
 import static io.ballerina.stdlib.data.yaml.lexer.Utils.isTagChar;
 
+/**
+ * Core logic of the YAML Lexer.
+ *
+ * @since 0.1.0
+ */
 public class YamlLexer {
 
     /**

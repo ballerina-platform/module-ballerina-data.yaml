@@ -20,6 +20,11 @@ package io.ballerina.stdlib.data.yaml.lexer;
 
 import java.util.List;
 
+/**
+ * This class will hold utility functions used in YAML Lexer.
+ *
+ * @since 0.1.0
+ */
 public class Utils {
 
     public static final Pattern PRINTABLE_PATTERN = new PrintablePattern();

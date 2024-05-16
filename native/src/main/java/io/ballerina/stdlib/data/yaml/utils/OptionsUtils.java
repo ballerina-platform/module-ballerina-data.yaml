@@ -22,6 +22,11 @@ import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.stdlib.data.yaml.common.Types;
 
+/**
+ * This class will parse the user configs to Java records.
+ *
+ * @since 0.1.0
+ */
 public class OptionsUtils {
 
     public record WriteConfig(int indentationPolicy, int blockLevel, boolean canonical, boolean useSingleQuotes,

@@ -18,6 +18,11 @@
 
 package io.ballerina.stdlib.data.yaml.utils;
 
+/**
+ * Error class use to handle all the parsing level exceptions.
+ *
+ * @since 0.1.0
+ */
 public class Error {
 
     public static class YamlParserException extends Exception {

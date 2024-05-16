@@ -18,7 +18,6 @@
 
 package io.ballerina.stdlib.data.yaml.parser;
 
-import io.ballerina.runtime.api.types.Type;
 import io.ballerina.stdlib.data.yaml.common.Types;
 import io.ballerina.stdlib.data.yaml.common.YamlEvent;
 import io.ballerina.stdlib.data.yaml.lexer.CharacterReader;
@@ -32,19 +31,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * State of YAML Parser.
+ *
+ * @since 0.1.0
+ */
 public class ParserState {
 
     public static final Token DUMMY_TOKEN = new Token(Token.TokenType.DUMMY);
     private final LexerState lexerState;
-    private Token.TokenType prevToken = Token.TokenType.DUMMY;
     private Token currentToken = DUMMY_TOKEN;
     private Token bufferedToken = DUMMY_TOKEN;
-    private List<YamlEvent> eventBuffer = new ArrayList<>();
+    private final List<YamlEvent> eventBuffer = new ArrayList<>();
     private int lineIndex = -1;
-    private boolean directiveDocument = false;
     private boolean explicitDoc = false;
     private Float yamlVersion = null;
-    private Map<String, String> customTagHandles = new HashMap();
+    private Map<String, String> customTagHandles = new HashMap<>();
     private boolean explicitKey = false;
     private int lastExplicitKeyLine = -1;
     private boolean expectBlockSequenceValue = false;
@@ -52,26 +54,19 @@ public class ParserState {
     private boolean indentationProcessed = false;
     private int lastKeyLine = -1;
     private boolean emptyKey = false;
-    private int numLines;
-    private List<String> reservedDirectives = new ArrayList<>();
+    private final List<String> reservedDirectives = new ArrayList<>();
 
-    public ParserState(Reader reader, Type type) {
+    public ParserState(Reader reader) {
         this.lexerState = new LexerState(new CharacterReader(reader));
         try {
             initLexer();
         } catch (Exception e) {
             eventBuffer.add(new YamlEvent.EndEvent(Types.Collection.STREAM));
         }
-
-        // handleExpectedType(type);
     }
 
     public int getLineIndex() {
         return lineIndex;
-    }
-
-    public void setLineIndex(int lineIndex) {
-        this.lineIndex = lineIndex;
     }
 
     public void updateLexerState(LexerState.State state) {
@@ -84,14 +79,6 @@ public class ParserState {
 
     public Token getBufferedToken() {
         return bufferedToken;
-    }
-
-    public Token.TokenType getPrevToken() {
-        return prevToken;
-    }
-
-    public void setPrevToken(Token.TokenType prevToken) {
-        this.prevToken = prevToken;
     }
 
     public Token getCurrentToken() {
@@ -108,14 +95,6 @@ public class ParserState {
 
     public List<YamlEvent> getEventBuffer() {
         return eventBuffer;
-    }
-
-    public boolean isDirectiveDocument() {
-        return directiveDocument;
-    }
-
-    public void setDirectiveDocument(boolean directiveDocument) {
-        this.directiveDocument = directiveDocument;
     }
 
     public boolean isExplicitDoc() {
@@ -198,16 +177,8 @@ public class ParserState {
         this.emptyKey = emptyKey;
     }
 
-    public int getNumLines() {
-        return numLines;
-    }
-
     public List<String> getReservedDirectives() {
         return reservedDirectives;
-    }
-
-    public void setNumLines(int numLines) {
-        this.numLines = numLines;
     }
 
     public int getLine() {

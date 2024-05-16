@@ -29,6 +29,11 @@ import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * This class will hold utility functions used in parser.
+ *
+ * @since 0.1.0
+ */
 public class ParserUtils {
 
     public static final String FIELD = "$field$.";
@@ -76,11 +81,5 @@ public class ParserUtils {
         EXPECT_MAP_VALUE,
         EXPECT_SEQUENCE_ENTRY,
         EXPECT_SEQUENCE_VALUE
-    }
-
-    public enum DocumentType {
-        ANY_DOCUMENT,
-        BARE_DOCUMENT,
-        DIRECTIVE_DOCUMENT
     }
 }

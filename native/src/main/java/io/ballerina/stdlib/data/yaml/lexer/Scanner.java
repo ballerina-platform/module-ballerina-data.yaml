@@ -37,6 +37,11 @@ import static io.ballerina.stdlib.data.yaml.lexer.Utils.FLOW_INDICATOR_PATTERN;
 import static io.ballerina.stdlib.data.yaml.lexer.Utils.URI_PATTERN;
 import static io.ballerina.stdlib.data.yaml.lexer.Utils.matchPattern;
 
+/**
+ * This class will hold utility functions to scan and consume different character patterns.
+ *
+ * @since 0.1.0
+ */
 public class Scanner {
 
     public static final Scan ANCHOR_NAME_SCANNER = new AnchorNameScanner();
@@ -88,7 +93,6 @@ public class Scanner {
         iterate(sm, scan, token, false);
     }
 
-
     /**
      * Lookahead the remaining characters in the buffer and capture lexemes for the tagged token.
      *
@@ -104,8 +108,6 @@ public class Scanner {
                 if (include && sm.peek() != '\n') {
                     sm.forward();
                 }
-                // state.index = include ? state.index : state.index - 1; // TODO
-//                sm.forward();
                 sm.tokenize(token);
                 return;
             }

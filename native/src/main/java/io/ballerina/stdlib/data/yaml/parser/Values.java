@@ -53,6 +53,11 @@ import java.util.Stack;
 
 import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.getAllFieldsInRecord;
 
+/**
+ * Create BValue for partially parsed YAML inputs.
+ *
+ * @since 0.1.0
+ */
 public class Values {
     private static final List<Integer> TYPE_PRIORITY_ORDER = List.of(
             TypeTags.INT_TAG,

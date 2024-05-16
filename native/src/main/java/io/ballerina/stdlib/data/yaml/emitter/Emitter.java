@@ -28,26 +28,34 @@ import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
 import java.util.ArrayList;
 import java.util.List;
 
+import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_GLOBAL_TAG_HANDLE;
+import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_LOCAL_TAG_HANDLE;
+import static io.ballerina.stdlib.data.yaml.utils.Constants.END_OF_YAML_DOCUMENT;
+import static io.ballerina.stdlib.data.yaml.utils.Constants.START_OF_YAML_DOCUMENT;
+
+/**
+ * Convert Yaml Event stream into list of YAML strings.
+ *
+ * @since 0.1.0
+ */
 public class Emitter {
 
     /**
      * Represents the variables of the Emitter state.
+     *
+     * @since 0.1.0
      */
     public static class EmitterState {
         List<BString> document;
         List<String> documentTags;
         // total white spaces for a single indent
         final String indent;
-
         // If set, the tag is written explicitly along with the value
         final boolean canonical;
-
         boolean lastBareDoc = false;
-
         final List<YamlEvent> events;
 
-        public EmitterState(List<YamlEvent> events,
-                            int indentationPolicy, boolean canonical) {
+        public EmitterState(List<YamlEvent> events, int indentationPolicy, boolean canonical) {
             this.events = events;
             this.canonical = canonical;
             this.document = new ArrayList<>();
@@ -59,12 +67,6 @@ public class Emitter {
             document.add(StringUtils.fromString(line));
         }
 
-        public void addTagHandle(String tagHandle) {
-            if (!documentTags.contains(tagHandle)) {
-                documentTags.add(tagHandle);
-            }
-        }
-
         public List<BString> getDocument() {
             return getDocument(false);
         }
@@ -72,14 +74,14 @@ public class Emitter {
         public List<BString> getDocument(boolean isStream) {
             List<BString> output = new ArrayList<>(document.stream().toList());
             if (!documentTags.isEmpty()) {
-                output.add(0, StringUtils.fromString("---"));
+                output.add(0, START_OF_YAML_DOCUMENT);
                 if (lastBareDoc) {
-                    output.add(0, StringUtils.fromString("..."));
+                    output.add(0, END_OF_YAML_DOCUMENT);
                     lastBareDoc = false;
                 }
-                output.add(StringUtils.fromString("..."));
+                output.add(END_OF_YAML_DOCUMENT);
             } else if (isStream && document.size() > 0) {
-                output.add(0, StringUtils.fromString("---"));
+                output.add(0, START_OF_YAML_DOCUMENT);
                 lastBareDoc = true;
             }
 
@@ -102,7 +104,7 @@ public class Emitter {
         }
         write(state);
         if (!state.events.isEmpty()) {
-            DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+            throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
         }
         return state.getDocument();
     }
@@ -125,7 +127,7 @@ public class Emitter {
                 if (startEvent.isFlowStyle()) {
                     state.addLine(writeFlowMapping(state, event.getTag()));
                 } else {
-                    writeBlockMapping(state, "", event.getTag());
+                    writeBlockMapping(state, "");
                 }
                 return;
             }
@@ -149,18 +151,18 @@ public class Emitter {
             return value;
         }
 
-        if (tag.startsWith(Types.DEFAULT_GLOBAL_TAG_HANDLE)) {
+        if (tag.startsWith(DEFAULT_GLOBAL_TAG_HANDLE)) {
             return state.canonical ? Utils.appendTagToValue(tagAsSuffix, "!!" +
-            tag.substring(Types.DEFAULT_GLOBAL_TAG_HANDLE.length()), value) : value;
+            tag.substring(DEFAULT_GLOBAL_TAG_HANDLE.length()), value) : value;
         }
 
-        if (tag.startsWith(Types.DEFAULT_LOCAL_TAG_HANDLE)) {
+        if (tag.startsWith(DEFAULT_LOCAL_TAG_HANDLE)) {
             return Utils.appendTagToValue(tagAsSuffix, tag, value);
         }
         return "";
     }
 
-    private static void writeBlockMapping(EmitterState state, String whitespace, String tag) {
+    private static void writeBlockMapping(EmitterState state, String whitespace) {
         YamlEvent event = Utils.getEvent(state);
         String line;
 
@@ -172,7 +174,7 @@ public class Emitter {
                         endEvent.getEndType() == Types.Collection.STREAM) {
                     break;
                 }
-                DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+                throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
             }
 
             if (event.getKind() == YamlEvent.EventKind.SCALAR_EVENT) {
@@ -202,7 +204,7 @@ public class Emitter {
                         state.addLine(line + writeFlowMapping(state, event.getTag()));
                     } else {
                         state.addLine(writeNode(state, line.substring(0, line.length() - 1), event.getTag(), true));
-                        writeBlockMapping(state, whitespace + state.indent, event.getTag());
+                        writeBlockMapping(state, whitespace + state.indent);
                     }
                 }
             }
@@ -265,7 +267,7 @@ public class Emitter {
             if (event.getKind() == YamlEvent.EventKind.END_EVENT) {
                 YamlEvent.EndEvent endEvent = (YamlEvent.EndEvent) event;
                 if (endEvent.getEndType() == Types.Collection.MAPPING) {
-                    DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+                    throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
                 }
                 if (emptySequence) {
                     state.addLine(whitespace + writeNode(state, "-", tag, true));
@@ -292,7 +294,7 @@ public class Emitter {
                         state.addLine(whitespace + "- " + writeFlowMapping(state, event.getTag()));
                     } else {
                         state.addLine(whitespace + "-");
-                        writeBlockMapping(state, whitespace + state.indent , event.getTag());
+                        writeBlockMapping(state, whitespace + state.indent);
                     }
                 }
             }
@@ -313,7 +315,7 @@ public class Emitter {
                 if (endEvent.getEndType() == Types.Collection.SEQUENCE) {
                     break;
                 }
-                DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+                throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
             }
 
             if (!firstValue) {

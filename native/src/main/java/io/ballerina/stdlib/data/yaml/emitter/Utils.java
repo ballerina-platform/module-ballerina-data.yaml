@@ -21,14 +21,13 @@ package io.ballerina.stdlib.data.yaml.emitter;
 import io.ballerina.stdlib.data.yaml.common.Types;
 import io.ballerina.stdlib.data.yaml.common.YamlEvent;
 
+/**
+ * Holds utilities use to emit YAML strings.
+ *
+ * @since 0.1.0
+ */
 public class Utils {
 
-    /**
-     * Obtain the topmost event from the event tree.
-     *
-     * @param state Current emitter state
-     * @return The topmost event from the current tree.
-     */
     public static YamlEvent getEvent(Emitter.EmitterState state) {
         if (state.events.size() < 1) {
             return new YamlEvent.EndEvent(Types.Collection.STREAM);

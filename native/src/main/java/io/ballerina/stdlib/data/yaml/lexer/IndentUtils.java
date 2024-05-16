@@ -25,7 +25,28 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * This class will hold utility functions process indentations.
+ *
+ * @since 0.1.0
+ */
 public class IndentUtils {
+
+    public record Indent(int column, Collection collection) {
+    }
+
+    public record Indentation(IndentationChange change,
+                              List<Collection> collection, List<Token.TokenType> tokens) {
+
+        public enum IndentationChange {
+            INDENT_INCREASE(+1),
+            INDENT_NO_CHANGE(0),
+            INDENT_DECREASE(-1);
+
+            IndentationChange(int i) {
+            }
+        }
+    }
 
     /** Check if the current index have sufficient indent.
      *
@@ -159,8 +180,8 @@ public class IndentUtils {
         if (sm.getIndent() == startIndex) {
 
             List<Collection> existingIndentType = sm.getIndents().stream()
-                    .filter(indent -> indent.getColumn() == startIndex)
-                    .map(Indent::getCollection)
+                    .filter(indent -> indent.column() == startIndex)
+                    .map(Indent::collection)
                     .toList();
 
             // The current token is a mapping key and a sequence entry exists for the indent
@@ -169,7 +190,7 @@ public class IndentUtils {
                 if (existingIndentType.contains(Collection.MAPPING)) {
                     return new Indentation(
                             Indentation.IndentationChange.INDENT_DECREASE,
-                            new ArrayList<>(Collections.singleton(sm.getIndents().pop().getCollection())),
+                            new ArrayList<>(Collections.singleton(sm.getIndents().pop().collection())),
                             sm.getClonedTokensForMappingValue());
                 } else {
                     throw new Error.YamlParserException("block mapping cannot have the " +
@@ -211,8 +232,8 @@ public class IndentUtils {
         if (sm.getIndent() > startIndex) {
 
             List<Collection> existingIndentType = sm.getIndents().stream()
-                    .filter(indent -> indent.getColumn() == startIndex)
-                    .map(Indent::getCollection)
+                    .filter(indent -> indent.column() == startIndex)
+                    .map(Indent::collection)
                     .toList();
 
             // The current token is a mapping key and a sequence entry exists for the indent
@@ -231,16 +252,16 @@ public class IndentUtils {
         int indentsSize = sm.getIndents().size();
         while (sm.getIndent() > startIndex && indentsSize > 0) {
             removedIndent = sm.getIndents().pop();
-            sm.setIndent(removedIndent.getColumn());
-            returnCollection.add(removedIndent.getCollection());
+            sm.setIndent(removedIndent.column());
+            returnCollection.add(removedIndent.collection());
             --indentsSize;
         }
 
 
         if (indentsSize > 0 && removedIndent != null) {
             Indent removedSecondIndent = sm.getIndents().pop();
-            if (removedSecondIndent.getColumn() == startIndex && collection == Collection.MAPPING) {
-                returnCollection.add(removedIndent.getCollection());
+            if (removedSecondIndent.column() == startIndex && collection == Collection.MAPPING) {
+                returnCollection.add(removedIndent.collection());
             } else {
                 sm.getIndents().add(removedSecondIndent);
             }

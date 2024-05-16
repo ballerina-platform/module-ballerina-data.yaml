@@ -18,10 +18,15 @@
 
 package io.ballerina.stdlib.data.yaml.lexer;
 
+/**
+ * Tokens used in YAML parser.
+ *
+ * @since 0.1.0
+ */
 public class Token {
-    private TokenType type;
+    private final TokenType type;
     private String value;
-    private Indentation indentation = null;
+    private IndentUtils.Indentation indentation = null;
 
     public Token(TokenType type) {
         this.type = type;
@@ -31,7 +36,7 @@ public class Token {
         this.value = value;
     }
 
-    public Token(TokenType type, String value, Indentation indentation) {
+    public Token(TokenType type, String value, IndentUtils.Indentation indentation) {
         this(type, value);
         this.indentation = indentation;
     }
@@ -44,12 +49,8 @@ public class Token {
         return value;
     }
 
-    public Indentation getIndentation() {
+    public IndentUtils.Indentation getIndentation() {
         return indentation;
-    }
-
-    public void setIndentation(Indentation indentation) {
-        this.indentation = indentation;
     }
 
     public enum TokenType {

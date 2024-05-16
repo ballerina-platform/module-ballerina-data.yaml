@@ -26,6 +26,11 @@ import java.text.MessageFormat;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
+/**
+ * Diagnostic log for YAML data module.
+ *
+ * @since 0.1.0
+ */
 public class DiagnosticLog {
     private static final String ERROR_PREFIX = "error";
     private static final String ERROR = "Error";
