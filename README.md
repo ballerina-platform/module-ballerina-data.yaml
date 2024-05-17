@@ -59,6 +59,7 @@ Execute the commands below to build from source.
 8. Publish the generated artifacts to the local Ballerina central repository:
 
         ./gradlew clean build -PpublishToLocalCentral=true
+
 9. Publish the generated artifacts to the Ballerina central repository:
 
         ./gradlew clean build -PpublishToCentral=true
@@ -77,5 +78,5 @@ All contributors are encouraged to read the [Ballerina Code of Conduct](https://
 
 * Chat live with us via our [Discord server](https://discord.gg/ballerinalang).
 * Post all technical questions on Stack Overflow with the [#ballerina](https://stackoverflow.com/questions/tagged/ballerina) tag.
-* For more information go to the [`xmldata` library](https://lib.ballerina.io/ballerina/xmldata/latest).
+* For more information go to the [`data.yaml` library](https://lib.ballerina.io/ballerina/data.yaml/latest).
 * For example demonstrations of the usage, go to [Ballerina By Examples](https://ballerina.io/swan-lake/learn/by-example/).
