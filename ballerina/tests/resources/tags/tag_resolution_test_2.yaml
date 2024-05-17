@@ -1,0 +1,33 @@
+# Define a server configuration
+!!map 
+server:
+  # Hostname or IP address
+  host: !!str "192.168.1.100"
+  # Port number
+  ports:
+    - !!int 8000
+    - !!int 0o21450
+    - !!int 0x2329
+  # Environment (can be overridden by an environment variable)
+  environment: development
+  restart: !!bool True
+  start: !!float 0.12
+  end: !!float .inf
+  retry: !!bool FALSE
+
+# Define logging configuration
+logging:
+  # Log level (options: debug, info, warn, error)
+  level: info
+  # File path for log messages
+  file: !!null ~
+
+# List of users with their roles
+users:
+  - name: John Doe
+    roles: !!seq
+      - admin
+      - editor
+  - name: Jane Smith
+    roles:
+      - user

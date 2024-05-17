@@ -1,0 +1,6 @@
+name: "Jhon"
+description: |
+  This is a multiline
+  string in YAML.
+  It preserves line breaks.
+age: 30
