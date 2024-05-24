@@ -91,7 +91,7 @@ public class CharacterReader {
     }
 
     private boolean hasNewLine(int codePoint) {
-        return codePoint == '\n' || codePoint == '\r' && peek() == '\n';
+        return codePoint == '\n';
     }
 
     private boolean checkAndReadData(int k) {

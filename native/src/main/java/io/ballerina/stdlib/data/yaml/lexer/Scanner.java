@@ -108,6 +108,9 @@ public class Scanner {
                 if (include && sm.peek() != '\n') {
                     sm.forward();
                 }
+                if (include && sm.peek() != '\r' && sm.peek(1) != '\n') {
+                    sm.forward(2);
+                }
                 sm.tokenize(token);
                 return;
             }
@@ -422,7 +425,7 @@ public class Scanner {
                 peekAtIndex = sm.peek(++numWhitespace);
             }
 
-            if (peekAtIndex == -1 || peekAtIndex == '\n') {
+            if (peekAtIndex == -1 || LINE_BREAK_PATTERN.pattern(peekAtIndex)) {
                 return true;
             }
 

@@ -33,5 +33,4 @@ public class Constants {
     static final String NAME = "Name";
     static final String YAML = "yaml";
     static final String DATA_YAML = "data.yaml";
-
 }

@@ -79,6 +79,14 @@ public class YamlLexer {
             return state.getState();
         }
 
+        // Check for line breaks when reading from string
+        if (state.peek() == '\r' && state.peek(1) == '\n' && state.getState() != LEXER_DOUBLE_QUOTE) {
+            state.setNewLine(true);
+            state.forward();
+            state.tokenize(EOL);
+            return state.getState();
+        }
+
         return state.getState().transition(state);
     }
 }
