@@ -426,7 +426,7 @@ public class Values {
         if (value instanceof BString) {
             return (BString) value;
         } else if (value instanceof Long || value instanceof String || value instanceof Integer
-                || value instanceof BDecimal || value instanceof Double) {
+                || value instanceof BDecimal || value instanceof Double || value instanceof Boolean) {
             return StringUtils.fromString(String.valueOf(value));
         }
         throw new RuntimeException("cannot convert to BString");

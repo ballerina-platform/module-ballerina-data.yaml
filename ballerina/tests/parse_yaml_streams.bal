@@ -22,7 +22,7 @@ const YAML_STREAM_TEST_PATH = FILE_PATH + "streams/";
 @test:Config
 isolated function testYamlStringParsing() returns error? {
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(YAML_STREAM_TEST_PATH + "stream_1.yaml");
-    anydata result = check parseStream(streamResult, {isStream: true});
+    anydata result = check parseStream(streamResult);
     test:assertTrue(result is anydata[]);
     test:assertEquals((<anydata[]>result).length(), 4);
 }
@@ -31,7 +31,7 @@ isolated function testYamlStringParsing() returns error? {
 isolated function testYamlStringParsing2() returns error? {
     string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
-    [ServiceType, ConfigType, ConfigType, DeploymentType] result = check parseStream(streamResult, {isStream: true});
+    [ServiceType, ConfigType, ConfigType, DeploymentType] result = check parseStream(streamResult);
 
     final ConfigType configMapValue = {
         "apiVersion": "v1",
@@ -55,7 +55,7 @@ isolated function testYamlStringParsing2() returns error? {
 isolated function testYamlStringParsing3() returns error? {
     string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
-    ExpectedType result = check parseStream(streamResult, {isStream: true});
+    ExpectedType result = check parseStream(streamResult);
 
     final ConfigType configMapValue = {
         "apiVersion": "v1",
@@ -79,7 +79,7 @@ isolated function testYamlStringParsing3() returns error? {
 isolated function testYamlStringParsing4() returns error? {
     string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
-    UnionType[] result = check parseStream(streamResult, {isStream: true});
+    UnionType[] result = check parseStream(streamResult);
 
     final ConfigType configMapValue = {
         "apiVersion": "v1",

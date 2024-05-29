@@ -20,6 +20,7 @@ package io.ballerina.stdlib.data.yaml.parser;
 
 import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.api.TypeTags;
+import io.ballerina.runtime.api.creators.TypeCreator;
 import io.ballerina.runtime.api.creators.ValueCreator;
 import io.ballerina.runtime.api.flags.SymbolFlags;
 import io.ballerina.runtime.api.types.ArrayType;
@@ -27,7 +28,9 @@ import io.ballerina.runtime.api.types.Field;
 import io.ballerina.runtime.api.types.IntersectionType;
 import io.ballerina.runtime.api.types.MapType;
 import io.ballerina.runtime.api.types.RecordType;
+import io.ballerina.runtime.api.types.TupleType;
 import io.ballerina.runtime.api.types.Type;
+import io.ballerina.runtime.api.types.UnionType;
 import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.utils.TypeUtils;
 import io.ballerina.runtime.api.values.BArray;
@@ -52,6 +55,7 @@ import org.ballerinalang.langlib.value.CloneReadOnly;
 
 import java.io.Reader;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -61,7 +65,6 @@ import java.util.Set;
 import java.util.Stack;
 
 import static io.ballerina.stdlib.data.yaml.common.Types.Collection.SEQUENCE;
-import static io.ballerina.stdlib.data.yaml.common.Types.Collection.STREAM;
 import static io.ballerina.stdlib.data.yaml.common.Types.DocumentType.ANY_DOCUMENT;
 import static io.ballerina.stdlib.data.yaml.common.Types.DocumentType.BARE_DOCUMENT;
 import static io.ballerina.stdlib.data.yaml.common.Types.DocumentType.DIRECTIVE_DOCUMENT;
@@ -128,7 +131,7 @@ public class YamlParser {
         final boolean nilAsOptionalField;
         final boolean absentAsNilableType;
         boolean expectedTypeIsReadonly = false;
-        boolean isStream = false;
+        boolean isPossibleStream = false;
 
         public ComposerState(ParserState parserState, OptionsUtils.ReadConfig readConfig) {
             this.parserState = parserState;
@@ -138,7 +141,6 @@ public class YamlParser {
             this.allowDataProjection = readConfig.allowDataProjection();
             this.nilAsOptionalField = readConfig.nilAsOptionalField();
             this.absentAsNilableType = readConfig.absentAsNilableType();
-            this.isStream = readConfig.isStream();
         }
 
         public int getLine() {
@@ -328,6 +330,31 @@ public class YamlParser {
             currentYamlNode = parentNode;
         }
 
+        static boolean hasMemberWithArraySubType(Type type) {
+            Type referredType = TypeUtils.getReferredType(type);
+            int referredTypeTag = referredType.getTag();
+            if (referredTypeTag == TypeTags.ARRAY_TAG || referredType.getTag() == TypeTags.TUPLE_TAG
+                || referredTypeTag == TypeTags.ANYDATA_TAG || referredTypeTag == TypeTags.JSON_TAG) {
+                return true;
+            } else if (referredTypeTag == TypeTags.UNION_TAG) {
+                for (Type memberType : ((UnionType) type).getMemberTypes()) {
+                    if (hasMemberWithArraySubType(memberType)) {
+                        return true;
+                    }
+                }
+            } else if (referredTypeTag == TypeTags.INTERSECTION_TAG) {
+                for (Type constituentType : ((IntersectionType) type).getConstituentTypes()) {
+                    if (constituentType.getTag() == TypeTags.READONLY_TAG) {
+                        continue;
+                    }
+                    return hasMemberWithArraySubType(constituentType);
+                }
+            } else if (referredTypeTag == TypeTags.TYPE_REFERENCED_TYPE_TAG) {
+                return hasMemberWithArraySubType(TypeUtils.getReferredType(type));
+            }
+            return false;
+        }
+
         public void handleExpectedType(Type type) {
             switch (type.getTag()) {
                 case TypeTags.RECORD_TYPE_TAG -> {
@@ -336,26 +363,48 @@ public class YamlParser {
                     updateFieldHierarchiesAndRestType(getAllFieldsInRecord(recordType), recordType.getRestFieldType());
                 }
                 case TypeTags.ARRAY_TAG -> {
+                    isPossibleStream = true;
                     expectedTypes.add(type);
                     arrayIndexes.push(0);
-                    if (isStream) {
-                        Type elementType = TypeUtils.getReferredType(((ArrayType) type).getElementType());
-                        if (elementType.getTag() == TypeTags.UNION_TAG) {
-                            expectedTypes.add(elementType);
-                        }
-                    }
+                    Type elementType = TypeUtils.getReferredType(((ArrayType) type).getElementType());
+                    Type unionType = TypeCreator.createUnionType(type, elementType);
+                    expectedTypes.push(unionType);
                 }
                 case TypeTags.TUPLE_TAG -> {
+                    isPossibleStream = true;
                     expectedTypes.add(type);
                     arrayIndexes.push(0);
+                    TupleType tupleType = (TupleType) type;
+                    List<Type> tupleElementTypes = tupleType.getTupleTypes();
+                    List<Type> unionMembers = new ArrayList<>();
+                    unionMembers.add(type);
+                    unionMembers.addAll(tupleElementTypes);
+                    Type tupleRestType = tupleType.getRestType();
+                    if (tupleRestType != null) {
+                        unionMembers.add(tupleRestType);
+                    }
+                    Type unionType = TypeCreator.createUnionType(unionMembers);
+                    expectedTypes.push(unionType);
+
                 }
                 case TypeTags.NULL_TAG, TypeTags.BOOLEAN_TAG, TypeTags.INT_TAG, TypeTags.BYTE_TAG,
                         TypeTags.SIGNED8_INT_TAG, TypeTags.SIGNED16_INT_TAG, TypeTags.SIGNED32_INT_TAG,
                         TypeTags.UNSIGNED8_INT_TAG, TypeTags.UNSIGNED16_INT_TAG, TypeTags.UNSIGNED32_INT_TAG,
                         TypeTags.FLOAT_TAG, TypeTags.DECIMAL_TAG, TypeTags.CHAR_STRING_TAG, TypeTags.STRING_TAG,
-                        TypeTags.FINITE_TYPE_TAG, TypeTags.UNION_TAG ->
+                        TypeTags.FINITE_TYPE_TAG ->
                         expectedTypes.push(type);
+                case TypeTags.UNION_TAG -> {
+                    UnionType unionType = (UnionType) type;
+                    for (Type memberType : unionType.getMemberTypes()) {
+                        if (hasMemberWithArraySubType(memberType)) {
+                            isPossibleStream = true;
+                            break;
+                        }
+                    }
+                    expectedTypes.push(type);
+                }
                 case TypeTags.JSON_TAG, TypeTags.ANYDATA_TAG -> {
+                    isPossibleStream = true;
                     expectedTypes.push(type);
                     updateFieldHierarchiesAndRestType(new HashMap<>(), type);
                 }
@@ -403,7 +452,7 @@ public class YamlParser {
         ComposerState composerState = new ComposerState(new ParserState(reader), readConfig);
         composerState.handleExpectedType(expectedType);
         try {
-            return readConfig.isStream() ? composeStream(composerState) : composeDocument(composerState);
+            return composerState.isPossibleStream ? composeStream(composerState) : composeDocument(composerState);
         } catch (Error.YamlParserException e) {
              return DiagnosticLog.error(DiagnosticErrorCode.YAML_PARSER_EXCEPTION,
                      e.getMessage(), e.getLine(), e.getColumn());
@@ -427,7 +476,7 @@ public class YamlParser {
 
         // Return an error if there is another root event
         event = handleEvent(state);
-        if (event.getKind() == YamlEvent.EventKind.END_EVENT && ((YamlEvent.EndEvent) event).getEndType() == STREAM) {
+        if (ParserUtils.isStreamEndEvent(event)) {
             return handleOutput(state, output);
         }
         if (event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
@@ -441,6 +490,9 @@ public class YamlParser {
     private static Object composeStream(ComposerState state) throws Error.YamlParserException {
         YamlEvent event = handleEvent(state, ANY_DOCUMENT);
 
+        boolean beginWithStream = event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT
+                && ((YamlEvent.DocumentMarkerEvent) state.terminatedDocEvent).isExplicit();
+
         state.currentYamlNode = Values.initRootArrayValue(state);
         state.rootValueInitialized = true;
 
@@ -449,12 +501,14 @@ public class YamlParser {
         if (state.expectedTypes.size() > 1) {
             hasUnionElementMember = true;
         } else {
+            if (prevUnionDepth == 1) {
+                state.expectedTypes.push(PredefinedTypes.TYPE_JSON);
+            }
             state.unionDepth = 0;
         }
-
+        boolean processFirstElement = false;
         // Iterate all the documents
-        while (!(event.getKind() == YamlEvent.EventKind.END_EVENT
-                && ((YamlEvent.EndEvent) event).getEndType() == STREAM)) {
+        while (!ParserUtils.isStreamEndEvent(event)) {
             if (hasUnionElementMember) {
                 Values.updateExpectedTypeForStreamDocument(state);
             } else {
@@ -481,12 +535,56 @@ public class YamlParser {
             } else { // Obtain the stream end event
                 event = handleEvent(state, ANY_DOCUMENT);
             }
+
+            if (!processFirstElement && state.expectedTypes.size() > 1) {
+                state.expectedTypes.pop();
+                BArray bArray = (BArray) state.currentYamlNode;
+                if (ParserUtils.isStreamEndEvent(event) && !beginWithStream) {
+                    state.unionDepth--;
+                    Object result = state.verifyAndConvertToUnion(bArray.getValues()[0]);
+                    return handleOutput(state, result);
+                }
+                processFirstElement = true;
+                Type peekType = state.expectedTypes.peek();
+                Type elementType;
+                if (peekType.getTag() == TypeTags.ARRAY_TAG) {
+                    elementType = TypeUtils.getReferredType(((ArrayType) peekType).getElementType());
+                } else {
+                    TupleType tupleType = (TupleType) peekType;
+                    List<Type> tupleTypes = tupleType.getTupleTypes();
+                    if (tupleTypes.size() > 0) {
+                        elementType = tupleTypes.get(0);
+                    } else {
+                        elementType = tupleType.getRestType();
+                    }
+                }
+                if (elementType.getTag() == TypeTags.UNION_TAG) {
+                    state.expectedTypes.add(elementType);
+                } else {
+                    state.expectedTypes.push(elementType);
+                    state.unionDepth = 0;
+                    Object result = state.verifyAndConvertToUnion(bArray.getValues()[0]);
+                    state.expectedTypes.pop();
+                    state.currentYamlNode = Values.initRootArrayValue(state);
+                    ((BArray) state.currentYamlNode).add(0, result);
+                }
+                continue;
+            }
+            int peekTag = state.expectedTypes.peek().getTag();
+            if (!processFirstElement && (peekTag == TypeTags.ANYDATA_TAG || peekTag == TypeTags.JSON_TAG)) {
+                processFirstElement = true;
+                BArray bArray = (BArray) state.currentYamlNode;
+                if (ParserUtils.isStreamEndEvent(event) && !beginWithStream) {
+                    Object result = state.verifyAndConvertToUnion(bArray.getValues()[0]);
+                    return handleOutput(state, result);
+                }
+            }
         }
 
         state.unionDepth = prevUnionDepth;
         if (state.unionDepth == 1) {
             state.unionDepth--;
-            if (hasUnionElementMember) {
+            if (hasUnionElementMember && state.expectedTypes.size() > 1) {
                 state.expectedTypes.pop();
             }
             return handleOutput(state, state.verifyAndConvertToUnion(state.currentYamlNode));
