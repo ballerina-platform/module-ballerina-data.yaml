@@ -59,6 +59,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -130,8 +131,11 @@ public class YamlParser {
         final boolean allowDataProjection;
         final boolean nilAsOptionalField;
         final boolean absentAsNilableType;
+        final boolean strictTupleOrder;
         boolean expectedTypeIsReadonly = false;
         boolean isPossibleStream = false;
+        DynamicTupleState dynamicTupleState = null;
+
 
         public ComposerState(ParserState parserState, OptionsUtils.ReadConfig readConfig) {
             this.parserState = parserState;
@@ -141,6 +145,7 @@ public class YamlParser {
             this.allowDataProjection = readConfig.allowDataProjection();
             this.nilAsOptionalField = readConfig.nilAsOptionalField();
             this.absentAsNilableType = readConfig.absentAsNilableType();
+            this.strictTupleOrder = readConfig.strictTupleOrder();
         }
 
         public int getLine() {
@@ -487,6 +492,98 @@ public class YamlParser {
                 state.getColumn());
     }
 
+    private static class DynamicTupleState {
+        UnionType tupleMembersUnion;
+        Map<Integer, List<Integer>> tupleMemberIndexTable;
+        final int tupleSize;
+        final TupleType tupleType;
+
+        DynamicTupleState(TupleType tupleType) {
+            this.tupleType = tupleType;
+            this.tupleMemberIndexTable = constructTupleMembersTableEntry(tupleType);
+            this.tupleMembersUnion = createTupleMembersUnion(tupleType);
+            this.tupleSize = tupleType.getTupleTypes().size();
+        }
+
+        private boolean isTupleValueCompleted() {
+            int size = tupleMemberIndexTable.values().size();
+            Type restType = tupleType.getRestType();
+            if (restType == null) {
+                return size == 0;
+            }
+            int restTypeHashCode = TypeUtils.getReferredType(restType).hashCode();
+            return size == 1 && tupleMemberIndexTable.get(restTypeHashCode).size() == 1;
+        }
+
+        private void updateTupleMemberIndexTableAndAddToTuple(Object value, BArray tupleValue) {
+            Type type = io.ballerina.stdlib.data.yaml.utils.TypeUtils.getType(value);
+            int typeHashOfBValue = type.hashCode();
+            if (tupleMemberIndexTable.containsKey(typeHashOfBValue)) {
+                List<Integer> tupleMemberEntries = tupleMemberIndexTable.get(typeHashOfBValue);
+                Integer tupleIndex = tupleMemberEntries.remove(0);
+                tupleValue.add(tupleIndex, value);
+                if (tupleSize <= tupleIndex) {
+                    tupleMemberEntries.add(tupleIndex + 1);
+                }
+                if (tupleMemberEntries.size() == 0) {
+                    tupleMemberIndexTable.remove(typeHashOfBValue);
+                }
+            }
+        }
+
+        private void updateUnionType() {
+            List<Integer> remainingTupleIndexes = new ArrayList<>();
+            tupleMemberIndexTable.values().forEach(remainingTupleIndexes::addAll);
+            List<Type> allMembers = new ArrayList<>();
+            List<Type> tupleMembers = tupleType.getTupleTypes();
+            Type restType = tupleType.getRestType();
+            remainingTupleIndexes.stream().sorted().forEach(idx -> {
+                if (tupleSize <= idx) {
+                    allMembers.add(restType);
+                } else {
+                    int index = idx;
+                    allMembers.add(tupleMembers.get(index));
+                }
+            });
+            tupleMembersUnion = TypeCreator.createUnionType(allMembers);
+        }
+
+        private static UnionType createTupleMembersUnion(TupleType tupleType) {
+            List<Type> allMembers = new ArrayList<>(tupleType.getTupleTypes());
+            Type restType = tupleType.getRestType();
+            if (restType != null) {
+                allMembers.add(restType);
+            }
+            return TypeCreator.createUnionType(allMembers);
+        }
+
+        private static Map<Integer, List<Integer>> constructTupleMembersTableEntry(TupleType tupleType) {
+            List<Type> memberTypes = tupleType.getTupleTypes();
+            Type restType = tupleType.getRestType();
+            Map<Integer, List<Integer>> tupleIndexTable = new HashMap<>();
+            for (int i = 0; i < memberTypes.size(); i++) {
+                addToTupleIndexTable(tupleIndexTable, i, memberTypes.get(i));
+            }
+            if (restType != null) {
+                addToTupleIndexTable(tupleIndexTable, memberTypes.size(), restType);
+            }
+            return tupleIndexTable;
+        }
+
+        private static void addToTupleIndexTable(Map<Integer, List<Integer>> tupleIndexTable,
+                                                 int index, Type type) {
+            Integer hashValue = TypeUtils.getReferredType(type).hashCode();
+            if (tupleIndexTable.containsKey(hashValue)) {
+                List<Integer> entryList = tupleIndexTable.get(hashValue);
+                entryList.add(index);
+            } else {
+                List<Integer> entryList = new LinkedList<>();
+                entryList.add(index);
+                tupleIndexTable.put(hashValue, entryList);
+            }
+        }
+    }
+
     private static Object composeStream(ComposerState state) throws Error.YamlParserException {
         YamlEvent event = handleEvent(state, ANY_DOCUMENT);
 
@@ -496,9 +593,11 @@ public class YamlParser {
         state.currentYamlNode = Values.initRootArrayValue(state);
         state.rootValueInitialized = true;
 
+        boolean hasTupleExpectedType = state.expectedTypes.get(0).getTag() == TypeTags.TUPLE_TAG;
+
         int prevUnionDepth = state.unionDepth;
         boolean hasUnionElementMember = false;
-        if (state.expectedTypes.size() > 1) {
+        if (state.expectedTypes.size() == 2) {
             hasUnionElementMember = true;
         } else {
             if (prevUnionDepth == 1) {
@@ -551,13 +650,43 @@ public class YamlParser {
                     elementType = TypeUtils.getReferredType(((ArrayType) peekType).getElementType());
                 } else {
                     TupleType tupleType = (TupleType) peekType;
+                    if (!state.strictTupleOrder) {
+                        state.dynamicTupleState = new DynamicTupleState(tupleType);
+                    }
                     List<Type> tupleTypes = tupleType.getTupleTypes();
+                    Type restType = tupleType.getRestType();
                     if (tupleTypes.size() > 0) {
                         elementType = tupleTypes.get(0);
                     } else {
-                        elementType = tupleType.getRestType();
+                        elementType = restType;
                     }
                 }
+                if (hasTupleExpectedType && !state.strictTupleOrder) {
+                    state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
+                    state.unionDepth = 0;
+                    Object result;
+                    try {
+                        result = state.verifyAndConvertToUnion(bArray.getValues()[0]);
+                    } catch (Exception e) {
+                        state.unionDepth = 1;
+                        continue;
+                    }
+                    state.expectedTypes.pop();
+                    state.currentYamlNode = Values.initRootArrayValue(state);
+
+                    state.dynamicTupleState.updateTupleMemberIndexTableAndAddToTuple(result,
+                            (BArray) state.currentYamlNode);
+                    state.dynamicTupleState.updateUnionType();
+                    if (state.dynamicTupleState.isTupleValueCompleted()) {
+                        break;
+                    }
+                    state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
+                    state.unionDepth = 1;
+                    state.nodesStack.add(state.currentYamlNode);
+                    state.currentYamlNode = bArray;
+                    continue;
+                }
+
                 if (elementType.getTag() == TypeTags.UNION_TAG) {
                     state.expectedTypes.add(elementType);
                 } else {
@@ -579,6 +708,38 @@ public class YamlParser {
                     return handleOutput(state, result);
                 }
             }
+
+            if (hasTupleExpectedType && !state.strictTupleOrder) {
+                BArray bArray = (BArray) state.currentYamlNode;
+                state.expectedTypes.pop();
+                state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
+                state.unionDepth = 0;
+                Object result;
+                try {
+                    result = state.verifyAndConvertToUnion(bArray.getValues()[state.arrayIndexes.peek() - 1]);
+                } catch (Exception e) {
+                    state.unionDepth = 1;
+                    continue;
+                }
+                state.expectedTypes.pop();
+                state.currentYamlNode = state.nodesStack.pop();
+
+                state.dynamicTupleState.updateTupleMemberIndexTableAndAddToTuple(result,
+                        (BArray) state.currentYamlNode);
+                state.dynamicTupleState.updateUnionType();
+                if (state.dynamicTupleState.isTupleValueCompleted()) {
+                    break;
+                }
+                state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
+                state.unionDepth = 1;
+                state.nodesStack.add(state.currentYamlNode);
+                state.currentYamlNode = bArray;
+            }
+        }
+
+        if (!state.strictTupleOrder && state.dynamicTupleState != null
+                && !state.dynamicTupleState.isTupleValueCompleted()) {
+            throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
         }
 
         state.unionDepth = prevUnionDepth;

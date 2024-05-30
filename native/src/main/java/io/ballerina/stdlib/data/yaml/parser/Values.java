@@ -538,7 +538,6 @@ public class Values {
     }
 
     static void updateNextMapValue(YamlParser.ComposerState state) {
-        Object currentYamlNode = state.currentYamlNode;
         Type expType = state.expectedTypes.peek();
 
         Optional<BMap<BString, Object>> nextMap = initNewMapValue(state, expType);

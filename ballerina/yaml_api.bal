@@ -85,6 +85,8 @@ public type Options record {|
         boolean nilAsOptionalField = false;
         # If `true`, absent fields will be considered as nilable types in the projection.
         boolean absentAsNilableType = false;
+        # If `true`, top level tuple ordering considered strictly.
+        boolean strictTupleOrder = false;
     }|false allowDataProjection = {};
 |};
 
