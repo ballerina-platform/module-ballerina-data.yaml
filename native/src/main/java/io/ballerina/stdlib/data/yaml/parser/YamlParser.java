@@ -648,6 +648,9 @@ public class YamlParser {
                 Type elementType;
                 if (peekType.getTag() == TypeTags.ARRAY_TAG) {
                     elementType = TypeUtils.getReferredType(((ArrayType) peekType).getElementType());
+                } else if (peekType.getTag() == TypeTags.UNION_TAG) {
+                    state.expectedTypes.add(PredefinedTypes.TYPE_JSON);
+                    continue;
                 } else {
                     TupleType tupleType = (TupleType) peekType;
                     if (!state.strictTupleOrder) {
@@ -745,7 +748,7 @@ public class YamlParser {
         state.unionDepth = prevUnionDepth;
         if (state.unionDepth == 1) {
             state.unionDepth--;
-            if (hasUnionElementMember && state.expectedTypes.size() > 1) {
+            if (state.expectedTypes.size() > 1) {
                 state.expectedTypes.pop();
             }
             return handleOutput(state, state.verifyAndConvertToUnion(state.currentYamlNode));
