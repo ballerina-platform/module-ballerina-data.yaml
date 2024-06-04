@@ -494,61 +494,51 @@ public class YamlParser {
 
     private static class DynamicTupleState {
         UnionType tupleMembersUnion;
-        List<Map<Integer, Integer>> tupleMemberIndexTable;
+        List<Map<Integer, Integer>> indexToTupleMemberMapping;
         final int tupleSize;
         final TupleType tupleType;
+        final Type restType;
         int restIndex;
 
         DynamicTupleState(TupleType tupleType) {
             this.tupleType = tupleType;
-            this.tupleMemberIndexTable = constructTupleMembersTableEntry(tupleType);
-            this.tupleMembersUnion = createTupleMembersUnion(tupleType);
             this.tupleSize = tupleType.getTupleTypes().size();
             this.restIndex = tupleSize;
+            this.restType = tupleType.getRestType();
+            this.indexToTupleMemberMapping = constructTupleMembersTableEntry(tupleType);
+            this.tupleMembersUnion = createTupleMembersUnion(tupleType, restType);
+
         }
 
         private boolean isTupleValueCompleted() {
-            int size = tupleMemberIndexTable.size();
-            return size == 0;
+            return indexToTupleMemberMapping.size() == 0;
         }
 
         private boolean canAddMoreRestMembers() {
-            return tupleType.getRestType() != null;
+            return restType != null;
         }
 
         private void updateTupleMemberIndexTableAndAddToTuple(Object value, BArray tupleValue) {
             Type type = io.ballerina.stdlib.data.yaml.utils.TypeUtils.getType(value);
             int typeHashOfBValue = type.hashCode();
-            int index = -1;
-            int indexTableIndex = -1;
-            for (int i = 0; i < tupleMemberIndexTable.size(); i++) {
-                Map<Integer, Integer> typeMapping = tupleMemberIndexTable.get(i);
+            for (int i = 0; i < indexToTupleMemberMapping.size(); i++) {
+                Map<Integer, Integer> typeMapping = indexToTupleMemberMapping.get(i);
                 if (typeMapping.containsKey(typeHashOfBValue)) {
-                    index = typeMapping.get(typeHashOfBValue);
-                    indexTableIndex = i;
-                    break;
+                    indexToTupleMemberMapping.remove(i);
+                    tupleValue.add(typeMapping.get(typeHashOfBValue), value);
+                    return;
                 }
             }
-            if (index != -1) {
-                tupleMemberIndexTable.remove(indexTableIndex);
-                tupleValue.add(index, value);
-                return;
-            }
-            if (tupleType.getRestType() != null
-                    && TypeUtils.getReferredType(tupleType.getRestType()).hashCode() == typeHashOfBValue) {
-                tupleValue.add(restIndex, value);
-                restIndex++;
+            if (restType != null && TypeUtils.getReferredType(restType).hashCode() == typeHashOfBValue) {
+                tupleValue.add(restIndex++, value);
             }
         }
 
         private void updateUnionType() {
             List<Type> allMembers = new ArrayList<>();
             List<Type> tupleMembers = tupleType.getTupleTypes();
-            Type restType = tupleType.getRestType();
-            for (Map<Integer, Integer> mapping : tupleMemberIndexTable) {
-                mapping.values().stream().findFirst()
-                        .ifPresent(index -> allMembers.add(tupleMembers.get(index)));
-
+            for (Map<Integer, Integer> mapping : indexToTupleMemberMapping) {
+                mapping.values().stream().findFirst().ifPresent(index -> allMembers.add(tupleMembers.get(index)));
             }
             if (restType != null) {
                 allMembers.add(restType);
@@ -556,9 +546,8 @@ public class YamlParser {
             tupleMembersUnion = TypeCreator.createUnionType(allMembers);
         }
 
-        private static UnionType createTupleMembersUnion(TupleType tupleType) {
+        private static UnionType createTupleMembersUnion(TupleType tupleType, Type restType) {
             List<Type> allMembers = new ArrayList<>(tupleType.getTupleTypes());
-            Type restType = tupleType.getRestType();
             if (restType != null) {
                 allMembers.add(restType);
             }

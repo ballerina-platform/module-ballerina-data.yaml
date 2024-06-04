@@ -24,7 +24,7 @@ import ballerina/jballerina.java;
 # + return - On success, returns the given target type value, else returns an `yaml:Error`
 public isolated function parseString(string s,
         Options options = {}, typedesc<anydata> t = <>)
-        returns t|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
+    returns t|Error = @java:Method {'class: "io.ballerina.lib.data.yaml.Native"} external;
 
 # Converts YAML byte[] to subtype of anydata.
 #
@@ -34,7 +34,7 @@ public isolated function parseString(string s,
 # + return - On success, returns the given target type value, else returns an `yaml:Error`
 public isolated function parseBytes(byte[] s,
         Options options = {}, typedesc<anydata> t = <>)
-        returns t|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
+    returns t|Error = @java:Method {'class: "io.ballerina.lib.data.yaml.Native"} external;
 
 # Converts YAML byte-block-stream to subtype of anydata.
 #
@@ -44,7 +44,7 @@ public isolated function parseBytes(byte[] s,
 # + return - On success, returns the given target type value, else returns an `yaml:Error`
 public isolated function parseStream(stream<byte[], error?> s,
         Options options = {}, typedesc<anydata> t = <>)
-        returns t|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
+    returns t|Error = @java:Method {'class: "io.ballerina.lib.data.yaml.Native"} external;
 
 # Converts anydata YAML value to a string.
 #
@@ -57,7 +57,7 @@ public isolated function toYamlString(anydata yamlValue, WriteConfig config = {}
 }
 
 isolated function toYamlStringArray(anydata yamlValue, WriteConfig config = {})
-    returns string[]|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
+    returns string[]|Error = @java:Method {'class: "io.ballerina.lib.data.yaml.Native"} external;
 
 # Represents the YAML schema available for the parser.
 #
