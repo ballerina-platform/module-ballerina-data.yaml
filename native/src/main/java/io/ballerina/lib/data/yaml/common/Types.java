@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.common;
+package io.ballerina.lib.data.yaml.common;
 
 /**
  * Define basic types and schemas in YAML files.

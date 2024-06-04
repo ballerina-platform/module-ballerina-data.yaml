@@ -16,10 +16,10 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.emitter;
+package io.ballerina.lib.data.yaml.emitter;
 
-import io.ballerina.stdlib.data.yaml.common.Types;
-import io.ballerina.stdlib.data.yaml.common.YamlEvent;
+import io.ballerina.lib.data.yaml.common.Types;
+import io.ballerina.lib.data.yaml.common.YamlEvent;
 
 /**
  * Holds utilities use to emit YAML strings.

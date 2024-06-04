@@ -16,15 +16,15 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.lexer;
+package io.ballerina.lib.data.yaml.lexer;
 
-import io.ballerina.stdlib.data.yaml.utils.Error;
+import io.ballerina.lib.data.yaml.utils.Error;
 
-import static io.ballerina.stdlib.data.yaml.lexer.LexerState.LEXER_DOUBLE_QUOTE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.EMPTY_LINE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.TAG;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.EOL;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.isTagChar;
+import static io.ballerina.lib.data.yaml.lexer.LexerState.LEXER_DOUBLE_QUOTE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.EMPTY_LINE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.TAG;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.EOL;
+import static io.ballerina.lib.data.yaml.lexer.Utils.isTagChar;
 
 /**
  * Core logic of the YAML Lexer.

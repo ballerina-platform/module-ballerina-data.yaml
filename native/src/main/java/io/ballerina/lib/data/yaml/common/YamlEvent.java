@@ -16,9 +16,9 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.common;
+package io.ballerina.lib.data.yaml.common;
 
-import io.ballerina.stdlib.data.yaml.common.Types.Collection;
+import io.ballerina.lib.data.yaml.common.Types.Collection;
 
 /**
  * Parser Events when parsing yaml data.

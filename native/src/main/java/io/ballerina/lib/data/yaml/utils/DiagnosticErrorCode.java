@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.utils;
+package io.ballerina.lib.data.yaml.utils;
 
 /**
  * Represents a diagnostic error code.

@@ -16,8 +16,10 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.io;
+package io.ballerina.lib.data.yaml.io;
 
+import io.ballerina.lib.data.yaml.parser.YamlParser;
+import io.ballerina.lib.data.yaml.utils.DiagnosticLog;
 import io.ballerina.runtime.api.Environment;
 import io.ballerina.runtime.api.Future;
 import io.ballerina.runtime.api.types.MethodType;
@@ -27,8 +29,6 @@ import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BObject;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.runtime.api.values.BTypedesc;
-import io.ballerina.stdlib.data.yaml.parser.YamlParser;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
 
 import java.io.InputStreamReader;
 import java.util.function.Consumer;

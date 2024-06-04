@@ -16,22 +16,22 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.emitter;
+package io.ballerina.lib.data.yaml.emitter;
 
+import io.ballerina.lib.data.yaml.common.Types;
+import io.ballerina.lib.data.yaml.common.YamlEvent;
+import io.ballerina.lib.data.yaml.utils.DiagnosticErrorCode;
+import io.ballerina.lib.data.yaml.utils.DiagnosticLog;
 import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.values.BString;
-import io.ballerina.stdlib.data.yaml.common.Types;
-import io.ballerina.stdlib.data.yaml.common.YamlEvent;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_GLOBAL_TAG_HANDLE;
-import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_LOCAL_TAG_HANDLE;
-import static io.ballerina.stdlib.data.yaml.utils.Constants.END_OF_YAML_DOCUMENT;
-import static io.ballerina.stdlib.data.yaml.utils.Constants.START_OF_YAML_DOCUMENT;
+import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_GLOBAL_TAG_HANDLE;
+import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_LOCAL_TAG_HANDLE;
+import static io.ballerina.lib.data.yaml.utils.Constants.END_OF_YAML_DOCUMENT;
+import static io.ballerina.lib.data.yaml.utils.Constants.START_OF_YAML_DOCUMENT;
 
 /**
  * Convert Yaml Event stream into list of YAML strings.

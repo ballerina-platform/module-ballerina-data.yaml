@@ -16,21 +16,21 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.parser;
+package io.ballerina.lib.data.yaml.parser;
 
+import io.ballerina.lib.data.yaml.common.YamlEvent;
+import io.ballerina.lib.data.yaml.utils.DiagnosticErrorCode;
+import io.ballerina.lib.data.yaml.utils.DiagnosticLog;
 import io.ballerina.runtime.api.types.Field;
 import io.ballerina.runtime.api.types.RecordType;
 import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
-import io.ballerina.stdlib.data.yaml.common.YamlEvent;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.ballerina.stdlib.data.yaml.common.Types.Collection.STREAM;
+import static io.ballerina.lib.data.yaml.common.Types.Collection.STREAM;
 
 /**
  * This class will hold utility functions used in parser.

@@ -16,14 +16,14 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.parser;
+package io.ballerina.lib.data.yaml.parser;
 
-import io.ballerina.stdlib.data.yaml.common.Types;
-import io.ballerina.stdlib.data.yaml.common.YamlEvent;
-import io.ballerina.stdlib.data.yaml.lexer.CharacterReader;
-import io.ballerina.stdlib.data.yaml.lexer.LexerState;
-import io.ballerina.stdlib.data.yaml.lexer.Token;
-import io.ballerina.stdlib.data.yaml.utils.Error;
+import io.ballerina.lib.data.yaml.common.Types;
+import io.ballerina.lib.data.yaml.common.YamlEvent;
+import io.ballerina.lib.data.yaml.lexer.CharacterReader;
+import io.ballerina.lib.data.yaml.lexer.LexerState;
+import io.ballerina.lib.data.yaml.lexer.Token;
+import io.ballerina.lib.data.yaml.utils.Error;
 
 import java.io.Reader;
 import java.util.ArrayList;

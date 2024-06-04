@@ -16,22 +16,22 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.serializer;
+package io.ballerina.lib.data.yaml.serializer;
 
+import io.ballerina.lib.data.yaml.common.Types;
+import io.ballerina.lib.data.yaml.common.YamlEvent;
 import io.ballerina.runtime.api.TypeTags;
 import io.ballerina.runtime.api.values.BArray;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.runtime.api.values.BValue;
-import io.ballerina.stdlib.data.yaml.common.Types;
-import io.ballerina.stdlib.data.yaml.common.YamlEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_GLOBAL_MAP_TAG_HANDLE;
-import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_GLOBAL_SEQ_TAG_HANDLE;
-import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_GLOBAL_STR_TAG_HANDLE;
+import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_GLOBAL_MAP_TAG_HANDLE;
+import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_GLOBAL_SEQ_TAG_HANDLE;
+import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_GLOBAL_STR_TAG_HANDLE;
 
 /**
  * Converts a Ballerina value to stream of YAML events.

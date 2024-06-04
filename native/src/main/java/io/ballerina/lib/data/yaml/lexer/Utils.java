@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.lexer;
+package io.ballerina.lib.data.yaml.lexer;
 
 import java.util.List;
 

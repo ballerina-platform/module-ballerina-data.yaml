@@ -16,11 +16,11 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.lexer;
+package io.ballerina.lib.data.yaml.lexer;
 
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
-import io.ballerina.stdlib.data.yaml.utils.Error;
+import io.ballerina.lib.data.yaml.utils.DiagnosticErrorCode;
+import io.ballerina.lib.data.yaml.utils.DiagnosticLog;
+import io.ballerina.lib.data.yaml.utils.Error;
 
 import java.io.IOException;
 import java.io.Reader;

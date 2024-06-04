@@ -16,8 +16,10 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.parser;
+package io.ballerina.lib.data.yaml.parser;
 
+import io.ballerina.lib.data.yaml.utils.DiagnosticErrorCode;
+import io.ballerina.lib.data.yaml.utils.DiagnosticLog;
 import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.api.TypeTags;
 import io.ballerina.runtime.api.creators.TypeCreator;
@@ -39,8 +41,6 @@ import io.ballerina.runtime.api.values.BDecimal;
 import io.ballerina.runtime.api.values.BError;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
 import org.ballerinalang.langlib.value.CloneReadOnly;
 
 import java.util.ArrayList;
@@ -51,7 +51,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Stack;
 
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.getAllFieldsInRecord;
+import static io.ballerina.lib.data.yaml.parser.ParserUtils.getAllFieldsInRecord;
 
 /**
  * Create BValue for partially parsed YAML inputs.

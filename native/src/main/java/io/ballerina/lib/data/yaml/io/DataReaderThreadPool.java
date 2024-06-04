@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.io;
+package io.ballerina.lib.data.yaml.io;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.SynchronousQueue;

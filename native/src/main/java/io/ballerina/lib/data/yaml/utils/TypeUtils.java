@@ -1,4 +1,4 @@
-package io.ballerina.stdlib.data.yaml.utils;
+package io.ballerina.lib.data.yaml.utils;
 
 import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.api.types.Type;

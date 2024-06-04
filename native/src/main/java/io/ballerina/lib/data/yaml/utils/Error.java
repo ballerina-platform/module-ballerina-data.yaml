@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.utils;
+package io.ballerina.lib.data.yaml.utils;
 
 /**
  * Error class use to handle all the parsing level exceptions.

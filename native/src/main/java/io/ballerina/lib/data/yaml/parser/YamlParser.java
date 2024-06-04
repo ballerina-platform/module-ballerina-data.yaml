@@ -16,8 +16,22 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.parser;
+package io.ballerina.lib.data.yaml.parser;
 
+import io.ballerina.lib.data.yaml.common.Types;
+import io.ballerina.lib.data.yaml.common.Types.Collection;
+import io.ballerina.lib.data.yaml.common.YamlEvent;
+import io.ballerina.lib.data.yaml.lexer.IndentUtils;
+import io.ballerina.lib.data.yaml.lexer.LexerState;
+import io.ballerina.lib.data.yaml.lexer.Token;
+import io.ballerina.lib.data.yaml.lexer.YamlLexer;
+import io.ballerina.lib.data.yaml.utils.Constants;
+import io.ballerina.lib.data.yaml.utils.DiagnosticErrorCode;
+import io.ballerina.lib.data.yaml.utils.DiagnosticLog;
+import io.ballerina.lib.data.yaml.utils.Error;
+import io.ballerina.lib.data.yaml.utils.JsonTraverse;
+import io.ballerina.lib.data.yaml.utils.OptionsUtils;
+import io.ballerina.lib.data.yaml.utils.TagResolutionUtils;
 import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.api.TypeTags;
 import io.ballerina.runtime.api.creators.TypeCreator;
@@ -37,20 +51,6 @@ import io.ballerina.runtime.api.values.BArray;
 import io.ballerina.runtime.api.values.BError;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
-import io.ballerina.stdlib.data.yaml.common.Types;
-import io.ballerina.stdlib.data.yaml.common.Types.Collection;
-import io.ballerina.stdlib.data.yaml.common.YamlEvent;
-import io.ballerina.stdlib.data.yaml.lexer.IndentUtils;
-import io.ballerina.stdlib.data.yaml.lexer.LexerState;
-import io.ballerina.stdlib.data.yaml.lexer.Token;
-import io.ballerina.stdlib.data.yaml.lexer.YamlLexer;
-import io.ballerina.stdlib.data.yaml.utils.Constants;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticErrorCode;
-import io.ballerina.stdlib.data.yaml.utils.DiagnosticLog;
-import io.ballerina.stdlib.data.yaml.utils.Error;
-import io.ballerina.stdlib.data.yaml.utils.JsonTraverse;
-import io.ballerina.stdlib.data.yaml.utils.OptionsUtils;
-import io.ballerina.stdlib.data.yaml.utils.TagResolutionUtils;
 import org.ballerinalang.langlib.value.CloneReadOnly;
 
 import java.io.Reader;
@@ -65,38 +65,38 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
-import static io.ballerina.stdlib.data.yaml.common.Types.Collection.SEQUENCE;
-import static io.ballerina.stdlib.data.yaml.common.Types.DocumentType.ANY_DOCUMENT;
-import static io.ballerina.stdlib.data.yaml.common.Types.DocumentType.BARE_DOCUMENT;
-import static io.ballerina.stdlib.data.yaml.common.Types.DocumentType.DIRECTIVE_DOCUMENT;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.ANCHOR;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.COMMENT;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DIRECTIVE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DIRECTIVE_MARKER;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DOUBLE_QUOTE_DELIMITER;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.EMPTY_LINE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.EOL;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.FOLDED;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.MAPPING_END;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.MAPPING_KEY;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.MAPPING_VALUE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.PLANAR_CHAR;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SEPARATION_IN_LINE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SEPARATOR;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SEQUENCE_END;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SEQUENCE_ENTRY;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SINGLE_QUOTE_DELIMITER;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.TAG;
-import static io.ballerina.stdlib.data.yaml.parser.Directive.reservedDirective;
-import static io.ballerina.stdlib.data.yaml.parser.Directive.tagDirective;
-import static io.ballerina.stdlib.data.yaml.parser.Directive.yamlDirective;
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_MAP_KEY;
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_MAP_VALUE;
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_SEQUENCE_ENTRY;
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_SEQUENCE_VALUE;
-import static io.ballerina.stdlib.data.yaml.parser.ParserUtils.getAllFieldsInRecord;
-import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_GLOBAL_TAG_HANDLE;
-import static io.ballerina.stdlib.data.yaml.utils.Constants.DEFAULT_LOCAL_TAG_HANDLE;
+import static io.ballerina.lib.data.yaml.common.Types.Collection.SEQUENCE;
+import static io.ballerina.lib.data.yaml.common.Types.DocumentType.ANY_DOCUMENT;
+import static io.ballerina.lib.data.yaml.common.Types.DocumentType.BARE_DOCUMENT;
+import static io.ballerina.lib.data.yaml.common.Types.DocumentType.DIRECTIVE_DOCUMENT;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.ANCHOR;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.COMMENT;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DIRECTIVE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DIRECTIVE_MARKER;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DOUBLE_QUOTE_DELIMITER;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.EMPTY_LINE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.EOL;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.FOLDED;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.MAPPING_END;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.MAPPING_KEY;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.MAPPING_VALUE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.PLANAR_CHAR;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEPARATION_IN_LINE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEPARATOR;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEQUENCE_END;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEQUENCE_ENTRY;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SINGLE_QUOTE_DELIMITER;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.TAG;
+import static io.ballerina.lib.data.yaml.parser.Directive.reservedDirective;
+import static io.ballerina.lib.data.yaml.parser.Directive.tagDirective;
+import static io.ballerina.lib.data.yaml.parser.Directive.yamlDirective;
+import static io.ballerina.lib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_MAP_KEY;
+import static io.ballerina.lib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_MAP_VALUE;
+import static io.ballerina.lib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_SEQUENCE_ENTRY;
+import static io.ballerina.lib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_SEQUENCE_VALUE;
+import static io.ballerina.lib.data.yaml.parser.ParserUtils.getAllFieldsInRecord;
+import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_GLOBAL_TAG_HANDLE;
+import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_LOCAL_TAG_HANDLE;
 
 /**
  * Core parsing of YAML strings.
@@ -519,7 +519,7 @@ public class YamlParser {
         }
 
         private void updateTupleMemberIndexTableAndAddToTuple(Object value, BArray tupleValue) {
-            Type type = io.ballerina.stdlib.data.yaml.utils.TypeUtils.getType(value);
+            Type type = io.ballerina.lib.data.yaml.utils.TypeUtils.getType(value);
             int typeHashOfBValue = type.hashCode();
             for (int i = 0; i < indexToTupleMemberMapping.size(); i++) {
                 Map<Integer, Integer> typeMapping = indexToTupleMemberMapping.get(i);

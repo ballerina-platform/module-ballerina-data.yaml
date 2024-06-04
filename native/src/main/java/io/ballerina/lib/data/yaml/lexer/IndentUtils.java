@@ -16,10 +16,10 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.lexer;
+package io.ballerina.lib.data.yaml.lexer;
 
-import io.ballerina.stdlib.data.yaml.common.Types.Collection;
-import io.ballerina.stdlib.data.yaml.utils.Error;
+import io.ballerina.lib.data.yaml.common.Types.Collection;
+import io.ballerina.lib.data.yaml.utils.Error;
 
 import java.util.ArrayList;
 import java.util.Collections;

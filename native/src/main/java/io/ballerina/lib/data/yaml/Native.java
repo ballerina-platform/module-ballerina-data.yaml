@@ -16,8 +16,14 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml;
+package io.ballerina.lib.data.yaml;
 
+import io.ballerina.lib.data.yaml.emitter.Emitter;
+import io.ballerina.lib.data.yaml.io.DataReaderTask;
+import io.ballerina.lib.data.yaml.io.DataReaderThreadPool;
+import io.ballerina.lib.data.yaml.parser.YamlParser;
+import io.ballerina.lib.data.yaml.serializer.Serializer;
+import io.ballerina.lib.data.yaml.utils.OptionsUtils;
 import io.ballerina.runtime.api.Environment;
 import io.ballerina.runtime.api.Future;
 import io.ballerina.runtime.api.creators.ValueCreator;
@@ -28,12 +34,6 @@ import io.ballerina.runtime.api.values.BObject;
 import io.ballerina.runtime.api.values.BStream;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.runtime.api.values.BTypedesc;
-import io.ballerina.stdlib.data.yaml.emitter.Emitter;
-import io.ballerina.stdlib.data.yaml.io.DataReaderTask;
-import io.ballerina.stdlib.data.yaml.io.DataReaderThreadPool;
-import io.ballerina.stdlib.data.yaml.parser.YamlParser;
-import io.ballerina.stdlib.data.yaml.serializer.Serializer;
-import io.ballerina.stdlib.data.yaml.utils.OptionsUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;

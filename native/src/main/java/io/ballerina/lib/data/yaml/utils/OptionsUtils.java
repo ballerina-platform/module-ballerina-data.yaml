@@ -16,11 +16,11 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.utils;
+package io.ballerina.lib.data.yaml.utils;
 
+import io.ballerina.lib.data.yaml.common.Types;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
-import io.ballerina.stdlib.data.yaml.common.Types;
 
 /**
  * This class will parse the user configs to Java records.

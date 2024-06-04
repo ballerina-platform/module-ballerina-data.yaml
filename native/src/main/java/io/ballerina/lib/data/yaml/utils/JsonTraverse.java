@@ -16,8 +16,10 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.utils;
+package io.ballerina.lib.data.yaml.utils;
 
+import io.ballerina.lib.data.yaml.parser.ParserUtils;
+import io.ballerina.lib.data.yaml.parser.Values;
 import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.api.TypeTags;
 import io.ballerina.runtime.api.creators.ValueCreator;
@@ -37,8 +39,6 @@ import io.ballerina.runtime.api.values.BArray;
 import io.ballerina.runtime.api.values.BError;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
-import io.ballerina.stdlib.data.yaml.parser.ParserUtils;
-import io.ballerina.stdlib.data.yaml.parser.Values;
 
 import java.util.ArrayDeque;
 import java.util.Deque;

@@ -16,56 +16,56 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.lexer;
+package io.ballerina.lib.data.yaml.lexer;
 
-import io.ballerina.stdlib.data.yaml.utils.Error;
+import io.ballerina.lib.data.yaml.utils.Error;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
-import static io.ballerina.stdlib.data.yaml.lexer.Scanner.COMMENT_SCANNER;
-import static io.ballerina.stdlib.data.yaml.lexer.Scanner.VERBATIM_URI_SCANNER;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.ALIAS;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.ANCHOR;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.CHOMPING_INDICATOR;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.COMMENT;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DECIMAL;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DIRECTIVE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DIRECTIVE_MARKER;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DOCUMENT_MARKER;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DOT;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DOUBLE_QUOTE_CHAR;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.DOUBLE_QUOTE_DELIMITER;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.EMPTY_LINE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.EOL;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.FOLDED;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.LITERAL;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.MAPPING_END;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.MAPPING_KEY;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.MAPPING_START;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.MAPPING_VALUE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.PLANAR_CHAR;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.PRINTABLE_CHAR;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SEPARATION_IN_LINE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SEPARATOR;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SEQUENCE_END;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SEQUENCE_ENTRY;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SEQUENCE_START;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SINGLE_QUOTE_CHAR;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.SINGLE_QUOTE_DELIMITER;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.TAG;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.TAG_HANDLE;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.TAG_PREFIX;
-import static io.ballerina.stdlib.data.yaml.lexer.Token.TokenType.TRAILING_COMMENT;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.DECIMAL_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.FLOW_INDICATOR_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.URI_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.WHITE_SPACE_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.WORD_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.checkCharacters;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.discernPlanarFromIndicator;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.getWhitespace;
+import static io.ballerina.lib.data.yaml.lexer.Scanner.COMMENT_SCANNER;
+import static io.ballerina.lib.data.yaml.lexer.Scanner.VERBATIM_URI_SCANNER;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.ALIAS;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.ANCHOR;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.CHOMPING_INDICATOR;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.COMMENT;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DECIMAL;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DIRECTIVE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DIRECTIVE_MARKER;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DOCUMENT_MARKER;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DOT;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DOUBLE_QUOTE_CHAR;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DOUBLE_QUOTE_DELIMITER;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.EMPTY_LINE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.EOL;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.FOLDED;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.LITERAL;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.MAPPING_END;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.MAPPING_KEY;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.MAPPING_START;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.MAPPING_VALUE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.PLANAR_CHAR;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.PRINTABLE_CHAR;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEPARATION_IN_LINE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEPARATOR;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEQUENCE_END;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEQUENCE_ENTRY;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEQUENCE_START;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SINGLE_QUOTE_CHAR;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SINGLE_QUOTE_DELIMITER;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.TAG;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.TAG_HANDLE;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.TAG_PREFIX;
+import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.TRAILING_COMMENT;
+import static io.ballerina.lib.data.yaml.lexer.Utils.DECIMAL_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.FLOW_INDICATOR_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.URI_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.WHITE_SPACE_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.WORD_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.checkCharacters;
+import static io.ballerina.lib.data.yaml.lexer.Utils.discernPlanarFromIndicator;
+import static io.ballerina.lib.data.yaml.lexer.Utils.getWhitespace;
 
 /**
  * State of the YAML Lexer.

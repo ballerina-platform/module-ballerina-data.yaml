@@ -16,26 +16,26 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.lexer;
+package io.ballerina.lib.data.yaml.lexer;
 
-import io.ballerina.stdlib.data.yaml.utils.Error;
+import io.ballerina.lib.data.yaml.utils.Error;
 
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.PRINTABLE_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.JSON_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.BOM_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.LINE_BREAK_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.WHITE_SPACE_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.DECIMAL_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.HEXA_DECIMAL_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.WORD_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.FLOW_INDICATOR_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.URI_PATTERN;
-import static io.ballerina.stdlib.data.yaml.lexer.Utils.matchPattern;
+import static io.ballerina.lib.data.yaml.lexer.Utils.PRINTABLE_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.JSON_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.BOM_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.LINE_BREAK_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.WHITE_SPACE_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.DECIMAL_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.HEXA_DECIMAL_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.WORD_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.FLOW_INDICATOR_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.URI_PATTERN;
+import static io.ballerina.lib.data.yaml.lexer.Utils.matchPattern;
 
 /**
  * This class will hold utility functions to scan and consume different character patterns.

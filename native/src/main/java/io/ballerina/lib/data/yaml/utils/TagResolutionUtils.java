@@ -16,9 +16,9 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml.utils;
+package io.ballerina.lib.data.yaml.utils;
 
-import io.ballerina.stdlib.data.yaml.parser.YamlParser;
+import io.ballerina.lib.data.yaml.parser.YamlParser;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
