@@ -558,16 +558,11 @@ public class YamlParser {
             List<Type> memberTypes = tupleType.getTupleTypes();
             List<Map<Integer, Integer>> tupleIndexTable = new LinkedList<>();
             for (int i = 0; i < memberTypes.size(); i++) {
-                addToTupleIndexTable(tupleIndexTable, i, memberTypes.get(i));
+                Map<Integer, Integer> typeMapping = new HashMap<>();
+                createIndexToTypeMapping(memberTypes.get(i), typeMapping, i);
+                tupleIndexTable.add(typeMapping);
             }
             return tupleIndexTable;
-        }
-
-        private static void addToTupleIndexTable(List<Map<Integer, Integer>> tupleIndexTable,
-                                                 int index, Type type) {
-            Map<Integer, Integer> typeMapping = new HashMap<>();
-            createIndexToTypeMapping(type, typeMapping, index);
-            tupleIndexTable.add(typeMapping);
         }
 
         private static void createIndexToTypeMapping(Type type, Map<Integer, Integer> typeMapping, int index) {
@@ -587,60 +582,33 @@ public class YamlParser {
     private static Object composeStream(ComposerState state) throws Error.YamlParserException {
         YamlEvent event = handleEvent(state, ANY_DOCUMENT);
 
-        boolean beginWithStream = event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT
-                && ((YamlEvent.DocumentMarkerEvent) state.terminatedDocEvent).isExplicit();
-
         state.currentYamlNode = Values.initRootArrayValue(state);
-        state.rootValueInitialized = true;
-
-        boolean hasTupleExpectedType = state.expectedTypes.get(0).getTag() == TypeTags.TUPLE_TAG;
 
         int prevUnionDepth = state.unionDepth;
-        boolean hasUnionElementMember = false;
-        if (state.expectedTypes.size() == 2) {
-            hasUnionElementMember = true;
-        } else {
-            if (prevUnionDepth == 1) {
-                state.expectedTypes.push(PredefinedTypes.TYPE_JSON);
-            }
+        boolean isBeginWithStream = isBeginWithStream(state, event);
+        boolean isTupleExpected = state.expectedTypes.get(0).getTag() == TypeTags.TUPLE_TAG;
+        boolean tupleOrArrayExpected = state.expectedTypes.size() == 2;
+        boolean processFirstElement = false;
+
+        if (!tupleOrArrayExpected && state.unionDepth == 1) {
+            state.expectedTypes.push(PredefinedTypes.TYPE_JSON);
             state.unionDepth = 0;
         }
-        boolean processFirstElement = false;
+
         // Iterate all the documents
         while (!ParserUtils.isStreamEndEvent(event)) {
-            if (hasUnionElementMember) {
-                Values.updateExpectedTypeForStreamDocument(state);
-            } else {
-                Values.updateExpectedType(state);
-            }
+            Values.updateExpectedType(state);
             composeDocument(state, event);
-            if (!hasTupleExpectedType) {
+            event = getNextYamlDocEvent(state);
+
+            if (!isTupleExpected) {
                 state.updateIndexOfArrayElement();
             }
-
-            if (state.terminatedDocEvent != null &&
-                    state.terminatedDocEvent.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
-                // Explicit document markers should be passed to the composeDocument
-                if (((YamlEvent.DocumentMarkerEvent) state.terminatedDocEvent).isExplicit()) {
-                    event = state.terminatedDocEvent;
-                    state.terminatedDocEvent = null;
-                } else { // All the trailing document end markers should be ignored
-                    state.terminatedDocEvent = null;
-                    event = handleEvent(state, ANY_DOCUMENT);
-
-                    while (event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT
-                            && !(((YamlEvent.DocumentMarkerEvent) event).isExplicit())) {
-                        event = handleEvent(state, ANY_DOCUMENT);
-                    }
-                }
-            } else { // Obtain the stream end event
-                event = handleEvent(state, ANY_DOCUMENT);
-            }
-
             if (!processFirstElement && state.expectedTypes.size() > 1) {
                 state.expectedTypes.pop();
                 BArray bArray = (BArray) state.currentYamlNode;
-                if (ParserUtils.isStreamEndEvent(event) && !beginWithStream) {
+                // check the yaml input contain only a single document
+                if (ParserUtils.isStreamEndEvent(event) && !isBeginWithStream) {
                     state.unionDepth--;
                     Object result = state.verifyAndConvertToUnion(bArray.getValues()[0]);
                     return handleOutput(state, result);
@@ -666,8 +634,9 @@ public class YamlParser {
                         elementType = restType;
                     }
                 }
-                if (hasTupleExpectedType && !state.strictTupleOrder) {
-                    state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
+                if (isTupleExpected && !state.strictTupleOrder) {
+                    DynamicTupleState dynamicTupleState = state.dynamicTupleState;
+                    state.expectedTypes.add(dynamicTupleState.tupleMembersUnion);
                     state.unionDepth = 0;
                     Object result;
                     try {
@@ -675,7 +644,7 @@ public class YamlParser {
                     } catch (Exception e) {
                         state.expectedTypes.pop();
                         state.currentYamlNode = Values.initRootArrayValue(state);
-                        state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
+                        state.expectedTypes.add(dynamicTupleState.tupleMembersUnion);
                         state.unionDepth = 1;
                         state.nodesStack.add(state.currentYamlNode);
                         state.currentYamlNode = bArray;
@@ -684,14 +653,13 @@ public class YamlParser {
                     state.expectedTypes.pop();
                     state.currentYamlNode = Values.initRootArrayValue(state);
 
-                    state.dynamicTupleState.updateTupleMemberIndexTableAndAddToTuple(result,
-                            (BArray) state.currentYamlNode);
-                    state.dynamicTupleState.updateUnionType();
-                    if (state.dynamicTupleState.isTupleValueCompleted() &&
-                            !state.dynamicTupleState.canAddMoreRestMembers()) {
+                    dynamicTupleState.updateTupleMemberIndexTableAndAddToTuple(result, (BArray) state.currentYamlNode);
+                    dynamicTupleState.updateUnionType();
+
+                    if (dynamicTupleState.isTupleValueCompleted() && !dynamicTupleState.canAddMoreRestMembers()) {
                         break;
                     }
-                    state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
+                    state.expectedTypes.add(dynamicTupleState.tupleMembersUnion);
                     state.unionDepth = 1;
                     state.nodesStack.add(state.currentYamlNode);
                     state.currentYamlNode = bArray;
@@ -710,17 +678,18 @@ public class YamlParser {
                 }
                 continue;
             }
+
             int peekTag = state.expectedTypes.peek().getTag();
             if (!processFirstElement && (peekTag == TypeTags.ANYDATA_TAG || peekTag == TypeTags.JSON_TAG)) {
                 processFirstElement = true;
                 BArray bArray = (BArray) state.currentYamlNode;
-                if (ParserUtils.isStreamEndEvent(event) && !beginWithStream) {
+                if (ParserUtils.isStreamEndEvent(event) && !isBeginWithStream) {
                     Object result = state.verifyAndConvertToUnion(bArray.getValues()[0]);
                     return handleOutput(state, result);
                 }
             }
 
-            if (hasTupleExpectedType && !state.strictTupleOrder) {
+            if (isTupleExpected && !state.strictTupleOrder) {
                 BArray bArray = (BArray) state.currentYamlNode;
                 state.expectedTypes.pop();
                 state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
@@ -760,13 +729,41 @@ public class YamlParser {
             if (state.expectedTypes.size() > 1) {
                 state.expectedTypes.pop();
             }
-            if (hasTupleExpectedType && state.dynamicTupleState != null
+            if (isTupleExpected && state.dynamicTupleState != null
                     && state.dynamicTupleState.canAddMoreRestMembers()) {
                 state.currentYamlNode = state.nodesStack.pop();
             }
             return handleOutput(state, state.verifyAndConvertToUnion(state.currentYamlNode));
         }
         return handleOutput(state, state.currentYamlNode);
+    }
+
+    private static YamlEvent getNextYamlDocEvent(ComposerState state) throws Error.YamlParserException {
+        YamlEvent event;
+        if (state.terminatedDocEvent != null &&
+                state.terminatedDocEvent.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
+            // Explicit document markers should be passed to the composeDocument
+            if (((YamlEvent.DocumentMarkerEvent) state.terminatedDocEvent).isExplicit()) {
+                event = state.terminatedDocEvent;
+                state.terminatedDocEvent = null;
+            } else { // All the trailing document end markers should be ignored
+                state.terminatedDocEvent = null;
+                event = handleEvent(state, ANY_DOCUMENT);
+
+                while (event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT
+                        && !(((YamlEvent.DocumentMarkerEvent) event).isExplicit())) {
+                    event = handleEvent(state, ANY_DOCUMENT);
+                }
+            }
+        } else { // Obtain the stream end event
+            event = handleEvent(state, ANY_DOCUMENT);
+        }
+        return event;
+    }
+
+    private static boolean isBeginWithStream(ComposerState state, YamlEvent event) {
+        return event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT
+                && ((YamlEvent.DocumentMarkerEvent) state.terminatedDocEvent).isExplicit();
     }
 
     private static Object composeNode(ComposerState state, YamlEvent event, boolean mapOrSequenceScalar)
@@ -852,7 +849,6 @@ public class YamlParser {
         boolean firstElement = true;
         if (!state.rootValueInitialized) {
             state.currentYamlNode = Values.initRootArrayValue(state);
-            state.rootValueInitialized = true;
         } else {
             Values.updateNextArrayValueBasedOnExpType(state);
         }
@@ -919,7 +915,6 @@ public class YamlParser {
             throws Error.YamlParserException {
         if (!state.rootValueInitialized) {
             state.currentYamlNode = Values.initRootMapValue(state);
-            state.rootValueInitialized = true;
         } else {
             Values.updateNextMapValueBasedOnExpType(state);
         }

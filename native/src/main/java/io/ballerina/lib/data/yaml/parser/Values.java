@@ -94,6 +94,7 @@ public class Values {
     public static final Integer UNSIGNED8_MAX_VALUE = 255;
 
     static BMap<BString, Object> initRootMapValue(YamlParser.ComposerState state) {
+        state.rootValueInitialized = true;
         Type expectedType = state.expectedTypes.peek();
         state.parserContexts.push(YamlParser.ParserContext.MAP);
         switch (expectedType.getTag()) {
@@ -120,6 +121,7 @@ public class Values {
     }
 
     static Object initRootArrayValue(YamlParser.ComposerState state) {
+        state.rootValueInitialized = true;
         state.parserContexts.push(YamlParser.ParserContext.ARRAY);
         Type expType = state.expectedTypes.peek();
         // In this point we know rhs is json[] or anydata[] hence init index counter.
@@ -555,14 +557,6 @@ public class Values {
         }
         state.expectedTypes.push(getMemberType(state.expectedTypes.peek(),
                 state.arrayIndexes.peek(), state.allowDataProjection));
-    }
-
-    static void updateExpectedTypeForStreamDocument(YamlParser.ComposerState state) {
-        if (state.unionDepth > 0) {
-            return;
-        }
-        state.expectedTypes.push(getMemberTypeForStreamsWithUnion(state.expectedTypes.peek(),
-                state.arrayIndexes.peek()));
     }
 
     static void updateNextMapValueBasedOnExpType(YamlParser.ComposerState state) {
