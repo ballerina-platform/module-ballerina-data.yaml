@@ -31,30 +31,6 @@ isolated function testYamlStringParsing() returns error? {
 isolated function testYamlStringParsing2() returns error? {
     string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
-    [ServiceType, ConfigType, ConfigType, DeploymentType] result = check parseStream(streamResult);
-
-    final ConfigType configMapValue = {
-        "apiVersion": "v1",
-        "kind": "ConfigMap",
-        "metadata": {"name": "ballerina-mongodb-configmap"},
-        "data": {
-            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" + 
-                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" + 
-                            "\ndbName = \"students\"\n\n[ballerina.log]\nlevel = \"DEBUG\"\n"
-        }
-    };
-
-    test:assertEquals(result.length(), 4);
-    test:assertEquals(result[1].apiVersion, configMapValue.apiVersion);
-    test:assertEquals(result[1].kind, configMapValue.kind);
-    test:assertEquals(result[1].metadata, configMapValue.metadata);
-    test:assertEquals(result[1].data, configMapValue.data);
-}
-
-@test:Config
-isolated function testYamlStringParsing3() returns error? {
-    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
-    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
     ExpectedType result = check parseStream(streamResult);
 
     final ConfigType configMapValue = {
@@ -62,8 +38,8 @@ isolated function testYamlStringParsing3() returns error? {
         "kind": "ConfigMap",
         "metadata": {"name": "ballerina-mongodb-configmap"},
         "data": {
-            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" + 
-                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" + 
+            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" +
+                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" +
                             "\ndbName = \"students\"\n\n[ballerina.log]\nlevel = \"DEBUG\"\n"
         }
     };
@@ -76,7 +52,7 @@ isolated function testYamlStringParsing3() returns error? {
 }
 
 @test:Config
-isolated function testYamlStringParsing4() returns error? {
+isolated function testYamlStringParsing3() returns error? {
     string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
     UnionType[] result = check parseStream(streamResult);
@@ -86,8 +62,8 @@ isolated function testYamlStringParsing4() returns error? {
         "kind": "ConfigMap",
         "metadata": {"name": "ballerina-mongodb-configmap"},
         "data": {
-            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" + 
-                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" + 
+            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" +
+                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" +
                             "\ndbName = \"students\"\n\n[ballerina.log]\nlevel = \"DEBUG\"\n"
         }
     };
@@ -98,6 +74,150 @@ isolated function testYamlStringParsing4() returns error? {
     test:assertEquals(result[1].metadata, configMapValue.metadata);
     test:assertEquals((<ConfigType>result[1]).data, configMapValue.data);
 }
+
+@test:Config
+isolated function testYamlStreamPastingWithTupleExpected() returns error? {
+    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    [ServiceType, ConfigType, ConfigType, DeploymentType] result = check parseStream(streamResult);
+
+    final ConfigType configMapValue = {
+        "apiVersion": "v1",
+        "kind": "ConfigMap",
+        "metadata": {"name": "ballerina-mongodb-configmap"},
+        "data": {
+            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" +
+                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" +
+                            "\ndbName = \"students\"\n\n[ballerina.log]\nlevel = \"DEBUG\"\n"
+        }
+    };
+
+    test:assertEquals(result.length(), 4);
+    test:assertEquals(result[1].apiVersion, configMapValue.apiVersion);
+    test:assertEquals(result[1].kind, configMapValue.kind);
+    test:assertEquals(result[1].metadata, configMapValue.metadata);
+    test:assertEquals(result[1].data, configMapValue.data);
+}
+
+@test:Config
+isolated function testYamlStreamPastingWithTupleExpected2() returns error? {
+    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    [DeploymentType, ServiceType, ConfigType] result = check parseStream(streamResult);
+
+    final ConfigType configMapValue = {
+        "apiVersion": "v1",
+        "kind": "ConfigMap",
+        "metadata": {"name": "ballerina-mongodb-configmap"},
+        "data": {
+            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" +
+                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" +
+                            "\ndbName = \"students\"\n\n[ballerina.log]\nlevel = \"DEBUG\"\n"
+        }
+    };
+
+    test:assertEquals(result.length(), 3);
+    test:assertEquals(result[2].apiVersion, configMapValue.apiVersion);
+    test:assertEquals(result[2].kind, configMapValue.kind);
+    test:assertEquals(result[2].metadata, configMapValue.metadata);
+    test:assertEquals(result[2].data, configMapValue.data);
+}
+
+@test:Config
+isolated function testYamlStreamPastingWithTupleExpected3() returns error? {
+    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    [DeploymentType, ServiceType, ConfigType, ConfigType...] result = check parseStream(streamResult);
+
+    final ConfigType configMapValue = {
+        "apiVersion": "v1",
+        "kind": "ConfigMap",
+        "metadata": {"name": "ballerina-mongodb-configmap"},
+        "data": {
+            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" +
+                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" +
+                            "\ndbName = \"students\"\n\n[ballerina.log]\nlevel = \"DEBUG\"\n"
+        }
+    };
+
+    test:assertEquals(result.length(), 4);
+    test:assertEquals(result[2].apiVersion, configMapValue.apiVersion);
+    test:assertEquals(result[2].kind, configMapValue.kind);
+    test:assertEquals(result[2].metadata, configMapValue.metadata);
+    test:assertEquals(result[2].data, configMapValue.data);
+}
+
+@test:Config
+isolated function testYamlStreamPastingWithTupleExpected4() returns error? {
+    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    [ConfigType, ServiceType, ConfigType...] result = check parseStream(streamResult);
+
+    final ConfigType configMapValue = {
+        "apiVersion": "v1",
+        "kind": "ConfigMap",
+        "metadata": {"name": "ballerina-mongodb-configmap"},
+        "data": {
+            "Config.toml": "[ballerina.ballerina_mongodb_kubernetes]" +
+                            "\nmongodbPort = 27017\nmongodbHost = \"mongodb-service\"" +
+                            "\ndbName = \"students\"\n\n[ballerina.log]\nlevel = \"DEBUG\"\n"
+        }
+    };
+
+    test:assertEquals(result.length(), 3);
+    test:assertEquals(result[0].apiVersion, configMapValue.apiVersion);
+    test:assertEquals(result[0].kind, configMapValue.kind);
+    test:assertEquals(result[0].metadata, configMapValue.metadata);
+    test:assertEquals(result[0].data, configMapValue.data);
+}
+
+@test:Config
+isolated function testYamlStreamPastingWithTupleExpected5() returns error? {
+    string filePaht = YAML_STREAM_TEST_PATH + "stream_2.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    [ServiceType, int...] result = check parseStream(streamResult);
+
+    test:assertEquals(result.length(), 4);
+    test:assertEquals(result[1], 0);
+    test:assertEquals(result[2], 1);
+    test:assertEquals(result[3], 2);
+}
+
+@test:Config
+isolated function testYamlStreamPastingWithTupleExpected6() returns error? {
+    string filePaht = YAML_STREAM_TEST_PATH + "stream_3.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    [T1, T1|T2, T2, T3, T3|T2, T2|T3, T1...] result = check parseStream(streamResult);
+    [T1, T1|T2, T2, T3, T3|T2, T2|T3, T1...] expectedResult = [
+        {"p1": "T1_0"},
+        {"p1": "T1_1"},
+        {"p2": "123", "p3": "true", "p1": "T2_2"},
+        {"p2": 123, "p3": true, "p1": "T3_3"},
+        {"p2": "123", "p3": "string", "p1": "T2_4"},
+        {"p2": "123", "p3": "false", "p1": "T2_5"},
+        {"p1": "T1_6"},
+        {"p1": "T1_7"},
+        {"p1": "T1_8"},
+        {"p1": "T1_9"}
+    ];
+    test:assertEquals(result, expectedResult);
+}
+
+type T1 record {|
+    string p1;
+|};
+
+type T2 record {|
+    *T1;
+    string p2;
+    string p3;
+|};
+
+type T3 record {|
+    *T1;
+    int p2;
+    boolean p3;
+|};
 
 type ExpectedType UnionType[2];
 
