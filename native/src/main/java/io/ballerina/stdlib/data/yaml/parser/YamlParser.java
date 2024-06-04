@@ -494,57 +494,65 @@ public class YamlParser {
 
     private static class DynamicTupleState {
         UnionType tupleMembersUnion;
-        Map<Integer, List<Integer>> tupleMemberIndexTable;
+        List<Map<Integer, Integer>> tupleMemberIndexTable;
         final int tupleSize;
         final TupleType tupleType;
+        int restIndex;
 
         DynamicTupleState(TupleType tupleType) {
             this.tupleType = tupleType;
             this.tupleMemberIndexTable = constructTupleMembersTableEntry(tupleType);
             this.tupleMembersUnion = createTupleMembersUnion(tupleType);
             this.tupleSize = tupleType.getTupleTypes().size();
+            this.restIndex = tupleSize;
         }
 
         private boolean isTupleValueCompleted() {
-            int size = tupleMemberIndexTable.values().size();
-            Type restType = tupleType.getRestType();
-            if (restType == null) {
-                return size == 0;
-            }
-            int restTypeHashCode = TypeUtils.getReferredType(restType).hashCode();
-            return size == 1 && tupleMemberIndexTable.get(restTypeHashCode).size() == 1;
+            int size = tupleMemberIndexTable.size();
+            return size == 0;
+        }
+
+        private boolean canAddMoreRestMembers() {
+            return tupleType.getRestType() != null;
         }
 
         private void updateTupleMemberIndexTableAndAddToTuple(Object value, BArray tupleValue) {
             Type type = io.ballerina.stdlib.data.yaml.utils.TypeUtils.getType(value);
             int typeHashOfBValue = type.hashCode();
-            if (tupleMemberIndexTable.containsKey(typeHashOfBValue)) {
-                List<Integer> tupleMemberEntries = tupleMemberIndexTable.get(typeHashOfBValue);
-                Integer tupleIndex = tupleMemberEntries.remove(0);
-                tupleValue.add(tupleIndex, value);
-                if (tupleSize <= tupleIndex) {
-                    tupleMemberEntries.add(tupleIndex + 1);
+            int index = -1;
+            int indexTableIndex = -1;
+            for (int i = 0; i < tupleMemberIndexTable.size(); i++) {
+                Map<Integer, Integer> typeMapping = tupleMemberIndexTable.get(i);
+                if (typeMapping.containsKey(typeHashOfBValue)) {
+                    index = typeMapping.get(typeHashOfBValue);
+                    indexTableIndex = i;
+                    break;
                 }
-                if (tupleMemberEntries.size() == 0) {
-                    tupleMemberIndexTable.remove(typeHashOfBValue);
-                }
+            }
+            if (index != -1) {
+                tupleMemberIndexTable.remove(indexTableIndex);
+                tupleValue.add(index, value);
+                return;
+            }
+            if (tupleType.getRestType() != null
+                    && TypeUtils.getReferredType(tupleType.getRestType()).hashCode() == typeHashOfBValue) {
+                tupleValue.add(restIndex, value);
+                restIndex++;
             }
         }
 
         private void updateUnionType() {
-            List<Integer> remainingTupleIndexes = new ArrayList<>();
-            tupleMemberIndexTable.values().forEach(remainingTupleIndexes::addAll);
             List<Type> allMembers = new ArrayList<>();
             List<Type> tupleMembers = tupleType.getTupleTypes();
             Type restType = tupleType.getRestType();
-            remainingTupleIndexes.stream().sorted().forEach(idx -> {
-                if (tupleSize <= idx) {
-                    allMembers.add(restType);
-                } else {
-                    int index = idx;
-                    allMembers.add(tupleMembers.get(index));
-                }
-            });
+            for (Map<Integer, Integer> mapping : tupleMemberIndexTable) {
+                mapping.values().stream().findFirst()
+                        .ifPresent(index -> allMembers.add(tupleMembers.get(index)));
+
+            }
+            if (restType != null) {
+                allMembers.add(restType);
+            }
             tupleMembersUnion = TypeCreator.createUnionType(allMembers);
         }
 
@@ -557,29 +565,32 @@ public class YamlParser {
             return TypeCreator.createUnionType(allMembers);
         }
 
-        private static Map<Integer, List<Integer>> constructTupleMembersTableEntry(TupleType tupleType) {
+        private static List<Map<Integer, Integer>> constructTupleMembersTableEntry(TupleType tupleType) {
             List<Type> memberTypes = tupleType.getTupleTypes();
-            Type restType = tupleType.getRestType();
-            Map<Integer, List<Integer>> tupleIndexTable = new HashMap<>();
+            List<Map<Integer, Integer>> tupleIndexTable = new LinkedList<>();
             for (int i = 0; i < memberTypes.size(); i++) {
                 addToTupleIndexTable(tupleIndexTable, i, memberTypes.get(i));
-            }
-            if (restType != null) {
-                addToTupleIndexTable(tupleIndexTable, memberTypes.size(), restType);
             }
             return tupleIndexTable;
         }
 
-        private static void addToTupleIndexTable(Map<Integer, List<Integer>> tupleIndexTable,
+        private static void addToTupleIndexTable(List<Map<Integer, Integer>> tupleIndexTable,
                                                  int index, Type type) {
-            Integer hashValue = TypeUtils.getReferredType(type).hashCode();
-            if (tupleIndexTable.containsKey(hashValue)) {
-                List<Integer> entryList = tupleIndexTable.get(hashValue);
-                entryList.add(index);
+            Map<Integer, Integer> typeMapping = new HashMap<>();
+            createIndexToTypeMapping(type, typeMapping, index);
+            tupleIndexTable.add(typeMapping);
+        }
+
+        private static void createIndexToTypeMapping(Type type, Map<Integer, Integer> typeMapping, int index) {
+            Type referredType = TypeUtils.getReferredType(type);
+            if (referredType.getTag() == TypeTags.UNION_TAG) {
+                UnionType unionType = (UnionType) referredType;
+                for (Type memberType: unionType.getMemberTypes()) {
+                    createIndexToTypeMapping(memberType, typeMapping, index);
+                }
             } else {
-                List<Integer> entryList = new LinkedList<>();
-                entryList.add(index);
-                tupleIndexTable.put(hashValue, entryList);
+                int hashValue = referredType.hashCode();
+                typeMapping.put(hashValue, index);
             }
         }
     }
@@ -614,7 +625,9 @@ public class YamlParser {
                 Values.updateExpectedType(state);
             }
             composeDocument(state, event);
-            state.updateIndexOfArrayElement();
+            if (!hasTupleExpectedType) {
+                state.updateIndexOfArrayElement();
+            }
 
             if (state.terminatedDocEvent != null &&
                     state.terminatedDocEvent.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
@@ -671,7 +684,12 @@ public class YamlParser {
                     try {
                         result = state.verifyAndConvertToUnion(bArray.getValues()[0]);
                     } catch (Exception e) {
+                        state.expectedTypes.pop();
+                        state.currentYamlNode = Values.initRootArrayValue(state);
+                        state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
                         state.unionDepth = 1;
+                        state.nodesStack.add(state.currentYamlNode);
+                        state.currentYamlNode = bArray;
                         continue;
                     }
                     state.expectedTypes.pop();
@@ -680,7 +698,8 @@ public class YamlParser {
                     state.dynamicTupleState.updateTupleMemberIndexTableAndAddToTuple(result,
                             (BArray) state.currentYamlNode);
                     state.dynamicTupleState.updateUnionType();
-                    if (state.dynamicTupleState.isTupleValueCompleted()) {
+                    if (state.dynamicTupleState.isTupleValueCompleted() &&
+                            !state.dynamicTupleState.canAddMoreRestMembers()) {
                         break;
                     }
                     state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
@@ -719,7 +738,7 @@ public class YamlParser {
                 state.unionDepth = 0;
                 Object result;
                 try {
-                    result = state.verifyAndConvertToUnion(bArray.getValues()[state.arrayIndexes.peek() - 1]);
+                    result = state.verifyAndConvertToUnion(bArray.getValues()[0]);
                 } catch (Exception e) {
                     state.unionDepth = 1;
                     continue;
@@ -730,7 +749,8 @@ public class YamlParser {
                 state.dynamicTupleState.updateTupleMemberIndexTableAndAddToTuple(result,
                         (BArray) state.currentYamlNode);
                 state.dynamicTupleState.updateUnionType();
-                if (state.dynamicTupleState.isTupleValueCompleted()) {
+                if (state.dynamicTupleState.isTupleValueCompleted() &&
+                        !state.dynamicTupleState.canAddMoreRestMembers()) {
                     break;
                 }
                 state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
@@ -750,6 +770,10 @@ public class YamlParser {
             state.unionDepth--;
             if (state.expectedTypes.size() > 1) {
                 state.expectedTypes.pop();
+            }
+            if (hasTupleExpectedType && state.dynamicTupleState != null
+                    && state.dynamicTupleState.canAddMoreRestMembers()) {
+                state.currentYamlNode = state.nodesStack.pop();
             }
             return handleOutput(state, state.verifyAndConvertToUnion(state.currentYamlNode));
         }
