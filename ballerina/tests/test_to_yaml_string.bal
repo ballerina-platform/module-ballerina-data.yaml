@@ -19,6 +19,13 @@ import ballerina/test;
 
 const TO_YAML_STRING_DATA = FILE_PATH + "to-yaml-string/";
 
+isolated function testToYamlString() returns error? {
+    string expectedResultPath = TO_YAML_STRING_DATA + "test_1.yaml";
+    string value = check toYamlString(j1);
+    string expectedValue = check io:fileReadString(expectedResultPath);
+    test:assertEquals(value, expectedValue);
+}
+
 @test:Config {
     dataProvider: dataToConvertAnydataValuesToYamlString
 }
@@ -30,7 +37,6 @@ isolated function testToYamlString1(anydata inputValue, string expectedFile, Wri
 }
 
 function dataToConvertAnydataValuesToYamlString() returns [anydata, string, WriteConfig][] => [
-    [j1, "test_1.yaml", {}],
     [j1, "test_2.yaml", {flowStyle: true}],
     [j1, "test_3.yaml", {forceQuotes: true, useSingleQuotes: false}],
     [j1, "test_4.yaml", {forceQuotes: true, useSingleQuotes: true}],

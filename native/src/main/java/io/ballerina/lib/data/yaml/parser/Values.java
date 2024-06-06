@@ -18,12 +18,15 @@
 
 package io.ballerina.lib.data.yaml.parser;
 
+import io.ballerina.lib.data.yaml.common.Types;
 import io.ballerina.lib.data.yaml.utils.DiagnosticErrorCode;
 import io.ballerina.lib.data.yaml.utils.DiagnosticLog;
+import io.ballerina.lib.data.yaml.utils.TagResolutionUtils;
 import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.api.TypeTags;
 import io.ballerina.runtime.api.creators.TypeCreator;
 import io.ballerina.runtime.api.creators.ValueCreator;
+import io.ballerina.runtime.api.flags.SymbolFlags;
 import io.ballerina.runtime.api.types.ArrayType;
 import io.ballerina.runtime.api.types.Field;
 import io.ballerina.runtime.api.types.FiniteType;
@@ -81,6 +84,7 @@ public class Values {
     private static final UnionType JSON_TYPE_WITH_BASIC_TYPES = TypeCreator.createUnionType(BASIC_JSON_MEMBER_TYPES);
     public static final MapType JSON_MAP_TYPE = TypeCreator.createMapType(PredefinedTypes.TYPE_JSON);
     public static final MapType ANYDATA_MAP_TYPE = TypeCreator.createMapType(PredefinedTypes.TYPE_ANYDATA);
+    public static final String NULL_VALUE = "null";
     public static final Integer BBYTE_MIN_VALUE = 0;
     public static final Integer BBYTE_MAX_VALUE = 255;
     public static final Integer SIGNED32_MAX_VALUE = 2147483647;
@@ -184,8 +188,13 @@ public class Values {
     }
 
     static Object convertAndUpdateCurrentValueNode(YamlParser.ComposerState sm, String value, Type type) {
+        if (sm.nilAsOptionalField && !sm.expectedTypes.peek().isNilable()
+                && value.equals(NULL_VALUE)
+                && sm.currentField != null && SymbolFlags.isFlagOn(sm.currentField.getFlags(), SymbolFlags.OPTIONAL)) {
+            return sm.currentYamlNode;
+        }
         Object currentYaml = sm.currentYamlNode;
-        Object convertedValue = convertToExpectedType(StringUtils.fromString(value), type);
+        Object convertedValue = convertToExpectedType(StringUtils.fromString(value), type, sm.schema);
         if (convertedValue instanceof BError) {
             if (sm.currentField != null) {
                 throw DiagnosticLog.error(DiagnosticErrorCode.INCOMPATIBLE_VALUE_FOR_FIELD, value, type,
@@ -234,7 +243,7 @@ public class Values {
         return result.toString();
     }
 
-    private static Object convertToExpectedType(BString value, Type type) {
+    private static Object convertToExpectedType(BString value, Type type, Types.YAMLSchema schema) {
         switch (type.getTag()) {
             case TypeTags.CHAR_STRING_TAG -> {
                 if (value.length() != 1) {
@@ -244,16 +253,16 @@ public class Values {
             }
             case TypeTags.FINITE_TYPE_TAG -> {
                 return ((FiniteType) type).getValueSpace().stream()
-                        .filter(finiteValue -> !(convertToSingletonValue(value.getValue(), finiteValue)
+                        .filter(finiteValue -> !(convertToSingletonValue(value.getValue(), finiteValue, schema)
                                 instanceof BError))
                         .findFirst()
                         .orElseGet(() -> DiagnosticLog.error(DiagnosticErrorCode.INCOMPATIBLE_TYPE, type, value));
             }
             case TypeTags.TYPE_REFERENCED_TYPE_TAG -> {
-                return convertToExpectedType(value, TypeUtils.getReferredType(type));
+                return convertToExpectedType(value, TypeUtils.getReferredType(type), schema);
             }
             default -> {
-                return fromStringWithType(value, type);
+                return fromStringWithType(value, type, schema);
             }
         }
     }
@@ -359,26 +368,7 @@ public class Values {
         return expectedType;
     }
 
-    static Type getMemberTypeForStreamsWithUnion(Type expectedType, int index) {
-        if (expectedType == null) {
-            return null;
-        }
-
-        if (expectedType.getTag() == TypeTags.ARRAY_TAG) {
-            ArrayType arrayType = (ArrayType) expectedType;
-            return arrayType.getElementType();
-        } else if (expectedType.getTag() == TypeTags.TUPLE_TAG) {
-            TupleType tupleType = (TupleType) expectedType;
-            List<Type> tupleTypes = tupleType.getTupleTypes();
-            if (tupleTypes.size() < index + 1) {
-                return tupleType.getRestType();
-            }
-            return tupleTypes.get(index);
-        }
-        return expectedType;
-    }
-
-    public static Object fromStringWithType(BString string, Type expType) {
+    public static Object fromStringWithType(BString string, Type expType, Types.YAMLSchema schema) {
         String value = string.getValue();
         return switch (expType.getTag()) {
             case TypeTags.INT_TAG -> stringToInt(value);
@@ -392,33 +382,47 @@ public class Values {
             case TypeTags.FLOAT_TAG -> stringToFloat(value);
             case TypeTags.DECIMAL_TAG -> stringToDecimal(value);
             case TypeTags.CHAR_STRING_TAG -> stringToChar(value);
-            case TypeTags.STRING_TAG -> string;
+            case TypeTags.STRING_TAG -> stringToString(string, schema);
             case TypeTags.BOOLEAN_TAG -> stringToBoolean(value);
             case TypeTags.NULL_TAG -> stringToNull(value);
-            case TypeTags.FINITE_TYPE_TAG -> stringToFiniteType(value, (FiniteType) expType);
-            case TypeTags.UNION_TAG -> stringToUnion(string, (UnionType) expType);
-            case TypeTags.JSON_TAG, TypeTags.ANYDATA_TAG -> stringToUnion(string, JSON_TYPE_WITH_BASIC_TYPES);
+            case TypeTags.FINITE_TYPE_TAG -> stringToFiniteType(value, (FiniteType) expType, schema);
+            case TypeTags.UNION_TAG -> stringToUnion(string, (UnionType) expType, schema);
+            case TypeTags.JSON_TAG, TypeTags.ANYDATA_TAG -> stringToUnion(string, JSON_TYPE_WITH_BASIC_TYPES, schema);
             case TypeTags.TYPE_REFERENCED_TYPE_TAG -> fromStringWithType(string,
-                    ((ReferenceType) expType).getReferredType());
+                    ((ReferenceType) expType).getReferredType(), schema);
             case TypeTags.INTERSECTION_TAG -> fromStringWithType(string,
-                    ((IntersectionType) expType).getEffectiveType());
+                    ((IntersectionType) expType).getEffectiveType(), schema);
             default -> returnError(value, expType.toString());
         };
     }
 
-    private static Object stringToFiniteType(String value, FiniteType finiteType) {
+    private static Object stringToString(BString string, Types.YAMLSchema schema) {
+        String value = string.getValue();
+        if (schema == Types.YAMLSchema.JSON_SCHEMA) {
+            if (value.equals("null") || value.equals("true") || value.equals("false")) {
+                return returnError(value, PredefinedTypes.TYPE_STRING.toString());
+            }
+        } else if (schema == Types.YAMLSchema.CORE_SCHEMA) {
+            if (TagResolutionUtils.isCoreSchemaNull(value) || TagResolutionUtils.isCoreSchemaBoolean(value)) {
+                return returnError(value, PredefinedTypes.TYPE_STRING.toString());
+            }
+        }
+        return string;
+    }
+
+    private static Object stringToFiniteType(String value, FiniteType finiteType, Types.YAMLSchema schema) {
         return finiteType.getValueSpace().stream()
-                .filter(finiteValue -> !(convertToSingletonValue(value, finiteValue) instanceof BError))
+                .filter(finiteValue -> !(convertToSingletonValue(value, finiteValue, schema) instanceof BError))
                 .findFirst()
                 .orElseGet(() -> returnError(value, finiteType.toString()));
     }
 
-    private static Object convertToSingletonValue(String str, Object singletonValue) {
+    private static Object convertToSingletonValue(String str, Object singletonValue, Types.YAMLSchema schema) {
         String singletonStr = String.valueOf(singletonValue);
         if (str.equals(singletonStr)) {
             BString value = StringUtils.fromString(str);
             Type expType = TypeUtils.getType(singletonValue);
-            return fromStringWithType(value, expType);
+            return fromStringWithType(value, expType, schema);
         } else {
             return returnError(str, singletonStr);
         }
@@ -597,7 +601,8 @@ public class Values {
         return Optional.ofNullable(nextArrValue);
     }
 
-    private static Object stringToUnion(BString string, UnionType expType) throws NumberFormatException {
+    private static Object stringToUnion(BString string, UnionType expType, Types.YAMLSchema schema)
+            throws NumberFormatException {
         List<Type> memberTypes = new ArrayList<>(expType.getMemberTypes());
         memberTypes.sort(Comparator.comparingInt(t -> {
             int index = TYPE_PRIORITY_ORDER.indexOf(TypeUtils.getReferredType(t).getTag());
@@ -605,7 +610,7 @@ public class Values {
         }));
         for (Type memberType : memberTypes) {
             try {
-                Object result = fromStringWithType(string, memberType);
+                Object result = fromStringWithType(string, memberType, schema);
                 if (result instanceof BError) {
                     continue;
                 }

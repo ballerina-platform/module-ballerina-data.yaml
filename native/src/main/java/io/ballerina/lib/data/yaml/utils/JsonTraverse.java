@@ -18,6 +18,7 @@
 
 package io.ballerina.lib.data.yaml.utils;
 
+import io.ballerina.lib.data.yaml.common.Types;
 import io.ballerina.lib.data.yaml.parser.ParserUtils;
 import io.ballerina.lib.data.yaml.parser.Values;
 import io.ballerina.runtime.api.PredefinedTypes;
@@ -56,10 +57,11 @@ public class JsonTraverse {
 
     private static final ThreadLocal<JsonTree> tlJsonTree = ThreadLocal.withInitial(JsonTree::new);
 
-    public static Object traverse(Object json, BMap<BString, Object> options, Type type) {
+    public static Object traverse(Object json, BMap<BString, Object> options, Type type, Types.YAMLSchema schema) {
         JsonTree jsonTree = tlJsonTree.get();
         try {
             Object allowDataProjection = options.get(Constants.ALLOW_DATA_PROJECTION);
+            jsonTree.schema = schema;
             if (allowDataProjection instanceof Boolean) {
                 jsonTree.allowDataProjection = false;
             } else if (allowDataProjection instanceof BMap<?, ?>) {
@@ -84,6 +86,7 @@ public class JsonTraverse {
         boolean allowDataProjection = true;
         boolean nilAsOptionalField = false;
         boolean absentAsNilableType = false;
+        Types.YAMLSchema schema = Types.YAMLSchema.CORE_SCHEMA;
 
         void reset() {
             currentField = null;
@@ -121,7 +124,7 @@ public class JsonTraverse {
                         TypeTags.SIGNED8_INT_TAG, TypeTags.SIGNED16_INT_TAG, TypeTags.SIGNED32_INT_TAG,
                         TypeTags.UNSIGNED8_INT_TAG, TypeTags.UNSIGNED16_INT_TAG, TypeTags.UNSIGNED32_INT_TAG,
                         TypeTags.FINITE_TYPE_TAG -> {
-                   return Values.fromStringWithType(Values.convertValueToBString(json), referredType);
+                   return Values.fromStringWithType(Values.convertValueToBString(json), referredType, schema);
                 }
                 case TypeTags.UNION_TAG -> {
                     for (Type memberType : ((UnionType) referredType).getMemberTypes()) {
@@ -210,7 +213,7 @@ public class JsonTraverse {
                             TypeTags.DECIMAL_TAG, TypeTags.STRING_TAG -> {
                         BString bStringVal = StringUtils.fromString(mapValue.toString());
 //                        Object value = convertToBasicType(mapValue, currentFieldType);
-                        Object value = Values.fromStringWithType(bStringVal, currentFieldType);
+                        Object value = Values.fromStringWithType(bStringVal, currentFieldType, schema);
                         ((BMap<BString, Object>) currentJsonNode).put(StringUtils.fromString(fieldNames.pop()), value);
                     }
                     default ->

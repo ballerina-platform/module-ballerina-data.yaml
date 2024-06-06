@@ -212,6 +212,10 @@ public class YamlParser {
             fieldNameHierarchy.pop();
             restType.pop();
             for (Field field : remainingFields.values()) {
+                if (absentAsNilableType && field.getFieldType().isNilable()) {
+                    continue;
+                }
+
                 if (SymbolFlags.isFlagOn(field.getFlags(), SymbolFlags.REQUIRED)) {
                     throw DiagnosticLog.error(DiagnosticErrorCode.REQUIRED_FIELD_NOT_PRESENT, field.getFieldName());
                 }
@@ -233,7 +237,7 @@ public class YamlParser {
                 options.put(Constants.ALLOW_DATA_PROJECTION, allowDataProjectionMap);
             }
 
-            return JsonTraverse.traverse(json, options, expectedTypes.peek());
+            return JsonTraverse.traverse(json, options, expectedTypes.peek(), schema);
         }
 
         private void finalizeObject() {

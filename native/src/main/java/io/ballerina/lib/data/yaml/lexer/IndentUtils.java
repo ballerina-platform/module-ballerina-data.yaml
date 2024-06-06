@@ -162,7 +162,9 @@ public class IndentUtils {
     public static Indentation handleIndent(LexerState sm) throws Error.YamlParserException {
         return handleIndent(sm, null);
     }
-    /** Validate the indentation of block collections.
+
+    /**
+     * Validate the indentation of block collections.
      */
     public static Indentation handleIndent(LexerState sm, Integer mapIndex) throws Error.YamlParserException {
         int startIndex = mapIndex == null ? sm.getColumn() - 1 : mapIndex;

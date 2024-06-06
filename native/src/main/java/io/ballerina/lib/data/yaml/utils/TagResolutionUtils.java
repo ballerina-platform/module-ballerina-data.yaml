@@ -40,7 +40,7 @@ public class TagResolutionUtils {
 
     public static Object constructNull(String value, YamlParser.ComposerState state)
         throws Error.YamlParserException {
-        if (value.equals("null") || value.equals("Null") || value.equals("NULL") || value.equals("~")) {
+        if (isCoreSchemaNull(value)) {
             return null;
         }
         throw new Error.YamlParserException("cannot cast " + value + "to null", state.getLine(), state.getColumn());
@@ -59,9 +59,9 @@ public class TagResolutionUtils {
     public static Object constructBool(String value, YamlParser.ComposerState state)
             throws Error.YamlParserException {
 
-        if (value.equals("true") || value.equals("True") || value.equals("TRUE")) {
+        if (isCoreSchemaTrue(value)) {
             return true;
-        } else if (value.equals("false") || value.equals("False") || value.equals("FALSE")) {
+        } else if (isCoreSchemaFalse(value)) {
             return false;
         }
         throw new Error.YamlParserException("cannot cast " + value + "to boolean", state.getLine(), state.getColumn());
@@ -130,5 +130,21 @@ public class TagResolutionUtils {
             return Double.parseDouble(value);
         }
         throw new Error.YamlParserException("cannot cast " + value + "to float", state.getLine(), state.getColumn());
+    }
+
+    public static boolean isCoreSchemaNull(String value) {
+        return value.equals("null") || value.equals("Null") || value.equals("NULL") || value.equals("~");
+    }
+
+    public static boolean isCoreSchemaBoolean(String value) {
+        return isCoreSchemaTrue(value) || isCoreSchemaFalse(value);
+    }
+
+    private static boolean isCoreSchemaTrue(String value) {
+        return value.equals("true") || value.equals("True") || value.equals("TRUE");
+    }
+
+    private static boolean isCoreSchemaFalse(String value) {
+        return value.equals("false") || value.equals("False") || value.equals("FALSE");
     }
 }
