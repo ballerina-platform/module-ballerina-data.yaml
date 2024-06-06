@@ -27,7 +27,7 @@ import io.ballerina.lib.data.yaml.common.Types.Collection;
  */
 public abstract class YamlEvent {
 
-    private EventKind kind;
+    private final EventKind kind;
     private String anchor = null;
     private String tag = null;
 
@@ -40,10 +40,6 @@ public abstract class YamlEvent {
     }
 
     public abstract YamlEvent clone();
-
-    public void setKind(EventKind kind) {
-        this.kind = kind;
-    }
 
     public String getAnchor() {
         return anchor;

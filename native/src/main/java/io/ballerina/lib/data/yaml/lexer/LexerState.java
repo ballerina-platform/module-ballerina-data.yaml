@@ -264,10 +264,6 @@ public class LexerState {
         return indentationBreak;
     }
 
-    public boolean isNewLine() {
-        return isNewLine;
-    }
-
     public void setNewLine(boolean newLine) {
         isNewLine = newLine;
     }
@@ -280,10 +276,6 @@ public class LexerState {
         isJsonKey = jsonKey;
     }
 
-    public boolean isTrailingComment() {
-        return trailingComment;
-    }
-
     public void setTrailingComment(boolean trailingComment) {
         this.trailingComment = trailingComment;
     }
@@ -294,10 +286,6 @@ public class LexerState {
 
     public void setFirstLine(boolean firstLine) {
         this.firstLine = firstLine;
-    }
-
-    public boolean isAllowTokensAsPlanar() {
-        return allowTokensAsPlanar;
     }
 
     public void setAllowTokensAsPlanar(boolean allowTokensAsPlanar) {

@@ -49,15 +49,6 @@ public class CharacterReader {
     }
 
     /**
-     * Peeks next code point.
-     *
-     * @return next code point
-     */
-    public int peek() {
-        return peek(0);
-    }
-
-    /**
      * Peeks the k-th indexed code point.
      *
      * @param k number of characters to peek
@@ -166,10 +157,6 @@ public class CharacterReader {
 
     public int getColumn() {
         return column;
-    }
-
-    public int getDataBufferSize() {
-        return dataBufferSize;
     }
 
     public int getRemainingBufferedSize() {
