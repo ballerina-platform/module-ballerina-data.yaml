@@ -46,6 +46,7 @@ import io.ballerina.compiler.syntax.tree.ModulePartNode;
 import io.ballerina.compiler.syntax.tree.ModuleVariableDeclarationNode;
 import io.ballerina.compiler.syntax.tree.NameReferenceNode;
 import io.ballerina.compiler.syntax.tree.Node;
+import io.ballerina.compiler.syntax.tree.NodeList;
 import io.ballerina.compiler.syntax.tree.QualifiedNameReferenceNode;
 import io.ballerina.compiler.syntax.tree.SyntaxKind;
 import io.ballerina.compiler.syntax.tree.TypeDefinitionNode;
@@ -103,7 +104,9 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
             }
         }
 
-        for (ModuleMemberDeclarationNode member : rootNode.members()) {
+        NodeList<ModuleMemberDeclarationNode> members = rootNode.members();
+        for (int i = 0; i < members.size(); i++) {
+            ModuleMemberDeclarationNode member = members.get(i);
             switch (member.kind()) {
                 case FUNCTION_DEFINITION -> processFunctionDefinitionNode((FunctionDefinitionNode) member, ctx);
                 case MODULE_VAR_DECL ->
@@ -187,7 +190,7 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
     private void validateExpectedType(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext ctx) {
         typeSymbol.getLocation().ifPresent(location -> currentLocation = location);
         switch (typeSymbol.typeKind()) {
-            case UNION -> validateUnionType((UnionTypeSymbol) typeSymbol, typeSymbol.getLocation(), ctx);
+            case UNION -> validateUnionType((UnionTypeSymbol) typeSymbol, ctx);
             case RECORD -> validateRecordType((RecordTypeSymbol) typeSymbol, ctx);
             case ARRAY -> validateExpectedType(((ArrayTypeSymbol) typeSymbol).memberTypeDescriptor(), ctx);
             case TUPLE -> validateTupleType((TupleTypeSymbol) typeSymbol, ctx);
@@ -215,35 +218,11 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
         }
     }
 
-    private void validateUnionType(UnionTypeSymbol unionTypeSymbol, Optional<Location> location,
+    private void validateUnionType(UnionTypeSymbol unionTypeSymbol,
                                    SyntaxNodeAnalysisContext ctx) {
-        boolean isHasUnsupportedType = false;
         List<TypeSymbol> memberTypeSymbols = unionTypeSymbol.memberTypeDescriptors();
         for (TypeSymbol memberTypeSymbol : memberTypeSymbols) {
-            if (isSupportedUnionMemberType(getRawType(memberTypeSymbol))) {
-                continue;
-            }
-            isHasUnsupportedType = true;
-        }
-
-        if (isHasUnsupportedType) {
-            reportDiagnosticInfo(ctx, location, YamlDataDiagnosticCodes.UNSUPPORTED_TYPE);
-        }
-    }
-
-    private boolean isSupportedUnionMemberType(TypeSymbol typeSymbol) {
-        TypeDescKind kind = typeSymbol.typeKind();
-        if (kind == TypeDescKind.TYPE_REFERENCE) {
-            kind = ((TypeReferenceTypeSymbol) typeSymbol).typeDescriptor().typeKind();
-        }
-
-        switch (kind) {
-            case TABLE, XML -> {
-                return false;
-            }
-            default -> {
-                return true;
-            }
+            validateExpectedType(getRawType(memberTypeSymbol), ctx);
         }
     }
 
@@ -342,16 +321,11 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
     }
 
     private String getAnnotModuleName(AnnotationSymbol annotation) {
-        Optional<ModuleSymbol> moduleSymbol = annotation.getModule();
-        if (moduleSymbol.isEmpty()) {
-            return "";
-        }
-        Optional<String> moduleName = moduleSymbol.get().getName();
-        return moduleName.orElse("");
+        return annotation.getModule().flatMap(Symbol::getName).orElse("");
     }
 
     public static boolean isYamlImport(ModuleSymbol moduleSymbol) {
-        return  BALLERINA.equals(moduleSymbol.id().orgName())
+        return BALLERINA.equals(moduleSymbol.id().orgName())
                 && DATA_YAML.equals(moduleSymbol.id().moduleName());
     }
 }
