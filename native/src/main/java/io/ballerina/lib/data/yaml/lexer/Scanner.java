@@ -107,9 +107,13 @@ public class Scanner {
             if (scan.scan(sm)) {
                 if (include && sm.peek() != '\n') {
                     sm.forward();
+                    sm.tokenize(token);
+                    return;
                 }
                 if (include && sm.peek() != '\r' && sm.peek(1) != '\n') {
                     sm.forward(2);
+                    sm.tokenize(token);
+                    return;
                 }
                 sm.tokenize(token);
                 return;
@@ -134,7 +138,7 @@ public class Scanner {
          * Process double quoted scalar values.
          */
         @Override
-        public boolean scan(LexerState sm) throws Error.YamlParserException {
+        public boolean scan(LexerState sm) {
             // Process nb-json characters
             if (matchPattern(sm, List.of(JSON_PATTERN), List.of(new Utils.CharPattern('\'')))) {
                 sm.appendToLexeme(Character.toString(sm.peek()));
@@ -148,10 +152,9 @@ public class Scanner {
                     sm.forward();
                     return false;
                 }
-                return true;
             }
 
-            throw new Error.YamlParserException("invalid single quote char", sm.getLine(), sm.getColumn());
+            return true;
         }
     }
 
@@ -179,12 +182,7 @@ public class Scanner {
                 return false;
             }
 
-            // Terminate when delimiter is found
-            if (sm.peek() == '\"') {
-                return true;
-            }
-
-            throw new Error.YamlParserException("invalid double quoted character", sm.getLine(), sm.getColumn());
+            return true;
         }
     }
 
@@ -234,7 +232,8 @@ public class Scanner {
                 return false;
             }
             int currentChar = sm.peek();
-            if (WHITE_SPACE_PATTERN.pattern(currentChar) || currentChar == '.') {
+            if (WHITE_SPACE_PATTERN.pattern(currentChar) || currentChar == '.'
+                    || LINE_BREAK_PATTERN.pattern(currentChar)) {
                 return true;
             }
             throw new Error.YamlParserException("invalid digit character", sm.getLine(), sm.getColumn());

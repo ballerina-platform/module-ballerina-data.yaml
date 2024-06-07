@@ -766,7 +766,7 @@ public class YamlParser {
     }
 
     private static boolean isBeginWithStream(ComposerState state, YamlEvent event) {
-        return event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT
+        return event.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT && state.terminatedDocEvent != null
                 && ((YamlEvent.DocumentMarkerEvent) state.terminatedDocEvent).isExplicit();
     }
 
