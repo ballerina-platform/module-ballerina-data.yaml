@@ -1,0 +1,10 @@
+records:
+  - name: "Record 1"
+    data:
+      key1: "value1"
+      key2: "value2"
+      key3: "value3"
+  - name: "Record 2"
+    data:
+      keyA: "valueA"
+      keyB: "valueB"
