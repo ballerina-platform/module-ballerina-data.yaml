@@ -20,8 +20,6 @@ package io.ballerina.lib.data.yaml.emitter;
 
 import io.ballerina.lib.data.yaml.common.Types;
 import io.ballerina.lib.data.yaml.common.YamlEvent;
-import io.ballerina.lib.data.yaml.utils.DiagnosticErrorCode;
-import io.ballerina.lib.data.yaml.utils.DiagnosticLog;
 import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.values.BString;
 
@@ -29,8 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_GLOBAL_TAG_HANDLE;
-import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_LOCAL_TAG_HANDLE;
-import static io.ballerina.lib.data.yaml.utils.Constants.END_OF_YAML_DOCUMENT;
 import static io.ballerina.lib.data.yaml.utils.Constants.START_OF_YAML_DOCUMENT;
 
 /**
@@ -47,7 +43,6 @@ public class Emitter {
      */
     public static class EmitterState {
         List<BString> document;
-        List<String> documentTags;
         // total white spaces for a single indent
         final String indent;
         // If set, the tag is written explicitly along with the value
@@ -59,7 +54,6 @@ public class Emitter {
             this.events = events;
             this.canonical = canonical;
             this.document = new ArrayList<>();
-            this.documentTags = new ArrayList<>();
             this.indent = " ".repeat(indentationPolicy);
         }
 
@@ -73,20 +67,12 @@ public class Emitter {
 
         public List<BString> getDocument(boolean isStream) {
             List<BString> output = new ArrayList<>(document.stream().toList());
-            if (!documentTags.isEmpty()) {
-                output.add(0, START_OF_YAML_DOCUMENT);
-                if (lastBareDoc) {
-                    output.add(0, END_OF_YAML_DOCUMENT);
-                    lastBareDoc = false;
-                }
-                output.add(END_OF_YAML_DOCUMENT);
-            } else if (isStream && document.size() > 0) {
+            if (isStream && document.size() > 0) {
                 output.add(0, START_OF_YAML_DOCUMENT);
                 lastBareDoc = true;
             }
 
             document = new ArrayList<>();
-            documentTags = new ArrayList<>();
             return output;
         }
     }
@@ -103,14 +89,11 @@ public class Emitter {
             return output;
         }
         write(state);
-        if (!state.events.isEmpty()) {
-            throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
-        }
         return state.getDocument();
     }
 
     private static void write(EmitterState state) {
-        YamlEvent event = Utils.getEvent(state);
+        YamlEvent event = getEvent(state);
 
         if (event.getKind() == YamlEvent.EventKind.START_EVENT) {
             YamlEvent.StartEvent startEvent = ((YamlEvent.StartEvent) event);
@@ -131,9 +114,6 @@ public class Emitter {
                 }
                 return;
             }
-            if (startType == Types.Collection.STREAM) {
-                state.addLine("---");
-            }
         }
 
         if (event.getKind() == YamlEvent.EventKind.SCALAR_EVENT) {
@@ -152,29 +132,21 @@ public class Emitter {
         }
 
         if (tag.startsWith(DEFAULT_GLOBAL_TAG_HANDLE)) {
-            return state.canonical ? Utils.appendTagToValue(tagAsSuffix, "!!" +
+            return state.canonical ? appendTagToValue(tagAsSuffix, "!!" +
             tag.substring(DEFAULT_GLOBAL_TAG_HANDLE.length()), value) : value;
         }
 
-        if (tag.startsWith(DEFAULT_LOCAL_TAG_HANDLE)) {
-            return Utils.appendTagToValue(tagAsSuffix, tag, value);
-        }
         return "";
     }
 
     private static void writeBlockMapping(EmitterState state, String whitespace) {
-        YamlEvent event = Utils.getEvent(state);
+        YamlEvent event = getEvent(state);
         String line;
 
         while (true) {
             line = "";
             if (event.getKind() == YamlEvent.EventKind.END_EVENT) {
-                YamlEvent.EndEvent endEvent = (YamlEvent.EndEvent) event;
-                if (endEvent.getEndType() == Types.Collection.MAPPING ||
-                        endEvent.getEndType() == Types.Collection.STREAM) {
-                    break;
-                }
-                throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+                break;
             }
 
             if (event.getKind() == YamlEvent.EventKind.SCALAR_EVENT) {
@@ -182,7 +154,7 @@ public class Emitter {
                 line += whitespace + writeNode(state, scalarEvent.getValue(), event.getTag()) + ": ";
             }
 
-            event = Utils.getEvent(state);
+            event = getEvent(state);
 
             if (event.getKind() == YamlEvent.EventKind.SCALAR_EVENT) {
                 YamlEvent.ScalarEvent scalarEvent = (YamlEvent.ScalarEvent) event;
@@ -208,22 +180,18 @@ public class Emitter {
                     }
                 }
             }
-            event = Utils.getEvent(state);
+            event = getEvent(state);
         }
     }
 
     private static String writeFlowMapping(EmitterState state, String tag) {
         StringBuilder line = new StringBuilder(writeNode(state, "{", tag));
-        YamlEvent event = Utils.getEvent(state);
+        YamlEvent event = getEvent(state);
         boolean isFirstValue = true;
 
         while (true) {
             if (event.getKind() == YamlEvent.EventKind.END_EVENT) {
-                YamlEvent.EndEvent endEvent = (YamlEvent.EndEvent) event;
-                if (endEvent.getEndType() == Types.Collection.MAPPING) {
-                    break;
-                }
-                DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+                break;
             }
 
             if (!isFirstValue) {
@@ -235,7 +203,7 @@ public class Emitter {
                 line.append(writeNode(state, scalarEvent.getValue(), event.getTag())).append(": ");
             }
 
-            event = Utils.getEvent(state);
+            event = getEvent(state);
 
             if (event.getKind() == YamlEvent.EventKind.SCALAR_EVENT) {
                 YamlEvent.ScalarEvent scalarEvent = (YamlEvent.ScalarEvent) event;
@@ -251,7 +219,7 @@ public class Emitter {
                 }
             }
 
-            event = Utils.getEvent(state);
+            event = getEvent(state);
             isFirstValue = false;
         }
 
@@ -260,15 +228,11 @@ public class Emitter {
     }
 
     private static void writeBlockSequence(EmitterState state, String whitespace, String tag) {
-        YamlEvent event = Utils.getEvent(state);
+        YamlEvent event = getEvent(state);
         boolean emptySequence = true;
 
         while (true) {
             if (event.getKind() == YamlEvent.EventKind.END_EVENT) {
-                YamlEvent.EndEvent endEvent = (YamlEvent.EndEvent) event;
-                if (endEvent.getEndType() == Types.Collection.MAPPING) {
-                    throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
-                }
                 if (emptySequence) {
                     state.addLine(whitespace + writeNode(state, "-", tag, true));
                 }
@@ -299,23 +263,19 @@ public class Emitter {
                 }
             }
 
-            event = Utils.getEvent(state);
+            event = getEvent(state);
             emptySequence = false;
         }
     }
 
     private static String writeFlowSequence(EmitterState state, String tag) {
         StringBuilder line = new StringBuilder(writeNode(state, "[", tag));
-        YamlEvent event = Utils.getEvent(state);
+        YamlEvent event = getEvent(state);
         boolean firstValue = true;
 
         while (true) {
             if (event.getKind() == YamlEvent.EventKind.END_EVENT) {
-                YamlEvent.EndEvent endEvent = (YamlEvent.EndEvent) event;
-                if (endEvent.getEndType() == Types.Collection.SEQUENCE) {
-                    break;
-                }
-                throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
+                break;
             }
 
             if (!firstValue) {
@@ -336,11 +296,19 @@ public class Emitter {
                 }
             }
 
-            event = Utils.getEvent(state);
+            event = getEvent(state);
             firstValue = false;
         }
 
         line.append("]");
         return line.toString();
+    }
+
+    public static YamlEvent getEvent(Emitter.EmitterState state) {
+        return state.events.remove(0);
+    }
+
+    public static String appendTagToValue(boolean tagAsSuffix, String tag, String value) {
+        return tagAsSuffix ? value + " " + tag : tag + " " + value;
     }
 }

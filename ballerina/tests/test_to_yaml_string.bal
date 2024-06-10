@@ -19,6 +19,12 @@ import ballerina/test;
 
 const TO_YAML_STRING_DATA = FILE_PATH + "to-yaml-string/";
 
+isolated function testSimpleScalarValue() returns error? {
+    string expectedValue = "Simple Scalar";
+    string value = check toYamlString(expectedValue);
+    test:assertEquals(value, expectedValue);
+}
+
 isolated function testToYamlString() returns error? {
     string expectedResultPath = TO_YAML_STRING_DATA + "test_1.yaml";
     string value = check toYamlString(j1);
@@ -44,8 +50,17 @@ function dataToConvertAnydataValuesToYamlString() returns [anydata, string, Writ
     [j1, "test_6.yaml", {canonical: true, forceQuotes: true}],
     [j2, "test_7.yaml", {flowStyle: true}],
     [j2, "test_8.yaml", {}],
-    [j2, "test_9.yaml", {isStream: true}]
+    [j2, "test_9.yaml", {isStream: true}],
+    [j3, "test_10.yaml", {}],
+    [j3, "test_11.yaml", {flowStyle: true}],
+    [j3, "test_12.yaml", {isStream: true}]
 ];
+
+isolated function testEmptySequenceOutput() returns error? {
+    string expectedValue = "-";
+    string value = check toYamlString([]);
+    test:assertEquals(value, expectedValue);
+}
 
 final json & readonly j1 = {
     "library": {
@@ -117,4 +132,10 @@ final json & readonly j2 = [
         "firstPublished": 1939,
         "isPartOfSeries": true
     }
+];
+
+final json & readonly j3 = [
+    ["STRING", "INT", "FLOAT", "BOOLEAN", "DECIMAL", "NIL"],
+    ["YAML", "TOML", "CSV", "JSON", "XML"],
+    [{"format": "EDI"}]
 ];
