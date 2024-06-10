@@ -57,7 +57,8 @@ function tagHandleNegativeDataProvider() returns [string, string][] => [
     ["tag_handle_negative_2.yaml", "'incompatible yaml version for the 1.2 parser' at line: '1' column: '9'"],
     ["tag_handle_negative_3.yaml", "'YAML document version is already defined' at line: '2' column: '5'"],
     ["tag_handle_negative_4.yaml", "'duplicate tag handle' at line: '2' column: '12'"],
-    ["tag_handle_negative_5.yaml", "'custom tags not supported' at line: '1' column: '28'"]
+    ["tag_handle_negative_5.yaml", "'custom tags not supported' at line: '1' column: '28'"],
+    ["tag_handle_negative_6.yaml", "'invalid digit character' at line: '1' column: '9'"]
 ];
 
 @test:Config {

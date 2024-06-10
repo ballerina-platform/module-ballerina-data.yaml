@@ -105,7 +105,6 @@ public class LexerState {
     private boolean captureIndent;
     private boolean firstLine = true;
     private boolean trailingComment = false;
-    private boolean isNewLine = false;
     private boolean allowTokensAsPlanar = false;
     private int lastEscapedChar = -1;
     private boolean eofStream = false;
@@ -264,10 +263,6 @@ public class LexerState {
         return indentationBreak;
     }
 
-    public void setNewLine(boolean newLine) {
-        isNewLine = newLine;
-    }
-
     public boolean isJsonKey() {
         return isJsonKey;
     }
@@ -317,7 +312,6 @@ public class LexerState {
         indentStartIndex = -1;
         tokensForMappingValue = new ArrayList<>();
         tabInWhitespace = -1;
-        isNewLine = false;
         keyDefinedForLine = false;
     }
 

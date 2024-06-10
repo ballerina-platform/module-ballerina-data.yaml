@@ -76,7 +76,6 @@ public class YamlLexer {
 
         // Check for line breaks when reading from string
         if (state.peek() == '\n' && state.getState() != LEXER_DOUBLE_QUOTE) {
-            state.setNewLine(true);
             state.forward();
             state.tokenize(EOL);
             return state.getState();
@@ -84,7 +83,6 @@ public class YamlLexer {
 
         // Check for line breaks when reading from string
         if (state.peek() == '\r' && state.peek(1) == '\n' && state.getState() != LEXER_DOUBLE_QUOTE) {
-            state.setNewLine(true);
             state.forward();
             state.tokenize(EOL);
             return state.getState();

@@ -44,7 +44,11 @@ function basicTypeDataForParseString() returns [string, typedesc<anydata>, anyda
     ["'escaped single ''quote'", string, "escaped single 'quote"],
     ["value # comment", string, "value"],
     ["value#not-comment", string, "value#not-comment"],
-    [string `key :${"\t"} value`, anydata, {"key": "value"}]
+    [string `key :${"\t"} value`, anydata, {"key": "value"}],
+    [string `${"\r\n"} key: value`, anydata, {"key": "value"}],
+    ["...", anydata, ()],
+    ["\" \tvalue\"", string, " \tvalue"],
+    ["' \tvalue'", string, " \tvalue"]
 ];
 
 @test:Config {
@@ -936,16 +940,6 @@ isolated function testUnSignedInt32AsExpectedTypeForParseString() returns error?
     test:assertEquals(val4.address.id, 4294967295);
 }
 
-@test:Config
-isolated function testNilableTypeAsFieldTypeForParseString() returns error? {
-
-}
-
-@test:Config
-isolated function testNilableTypeAsFieldTypeForParseAsType() returns error? {
-
-}
-
 @test:Config {
     groups: ["escaped"]
 }
@@ -982,7 +976,7 @@ isolated function testEscapeCharacterCaseForParseString() returns error? {
     dataProvider: escapedCharacterDataGen,
     groups: ["escaped"]
 }
-function testEscapedCharacterToken(string lexeme, string value) returns error? {
+isolated function testEscapedCharacterToken(string lexeme, string value) returns error? {
     string result = check parseString(string `"${lexeme}"`);
     test:assertEquals(result, value);
 }
@@ -1011,3 +1005,17 @@ function escapedCharacterDataGen() returns map<[string, string]> {
         "U-8": ["\\U00000041", "A"]
     };
 }
+
+@test:Config {
+    dataProvider: complexMappingKeyDataProvider
+}
+isolated function testComplexMappingKey(string filePath, anydata expectedValue) returns error? {
+    string content = check io:fileReadString(FILE_PATH + filePath);
+    anydata result = check parseString(content);
+    test:assertEquals(result, expectedValue);
+}
+
+function complexMappingKeyDataProvider() returns [string, anydata][] => [
+    ["complex_mapping_key_1.yaml", {"key": (), "key2": "value"}],
+    ["complex_mapping_key_2.yaml", {"data": {"key": (), "key2": "value"}}]
+];
