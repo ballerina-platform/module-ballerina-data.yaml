@@ -59,3 +59,33 @@ function tagHandleNegativeDataProvider() returns [string, string][] => [
     ["tag_handle_negative_4.yaml", "'duplicate tag handle' at line: '2' column: '12'"],
     ["tag_handle_negative_5.yaml", "'custom tags not supported' at line: '1' column: '28'"]
 ];
+
+@test:Config {
+    dataProvider: simpleNegativeTestDataProvider
+}
+function testSimpleNegativeCases(string yaml, string expectedErrMsg) returns error? {
+    anydata|Error result = parseString(yaml);
+    test:assertTrue(result is Error);
+    test:assertEquals((<Error>result).message(), expectedErrMsg);
+}
+
+function simpleNegativeTestDataProvider() returns map<[string, string]> {
+    return {
+        "invalid-unicode-1": [
+            string `"${"\\U0000004G"}"`,
+            "'expected a unicode character after escaped char' at line: '1' column: '10'"
+        ],
+        "invalid-unicode-2": [
+            string `"${"\\u004g"}"`,
+            "'expected a unicode character after escaped char' at line: '1' column: '6'"
+        ],
+        "invalid-unicode-3": [
+            string `"${"\\x4g"}"`,
+            "'expected a unicode character after escaped char' at line: '1' column: '4'"
+        ],
+        "invalid-unicode-4": [
+            string `"${"\\d4g"}"`,
+            "'invalid escape character' at line: '1' column: '2'"
+        ]
+    };
+}

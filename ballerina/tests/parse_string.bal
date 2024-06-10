@@ -41,7 +41,10 @@ function basicTypeDataForParseString() returns [string, typedesc<anydata>, anyda
     ["123", int, 123],
     ["12.23", float, 12.23],
     ["12.23", decimal, 12.23d],
-    ["'escaped single ''quote'", string, "escaped single 'quote"]
+    ["'escaped single ''quote'", string, "escaped single 'quote"],
+    ["value # comment", string, "value"],
+    ["value#not-comment", string, "value#not-comment"],
+    [string `key :${"\t"} value`, anydata, {"key": "value"}]
 ];
 
 @test:Config {
@@ -300,17 +303,17 @@ isolated function testNestedYamlStringToRecordWithRestFields2() returns error? {
     |} result = check parseString(content);
     test:assertEquals(result.length(), 2);
     test:assertEquals(result["a"], [
-        {
-            "c": "world",
-            "d": "2"
-        }
-    ]);
+                {
+                    "c": "world",
+                    "d": "2"
+                }
+            ]);
     test:assertEquals(result["b"], [
-        {
-            "c": "world",
-            "d": "2"
-        }
-    ]);
+                {
+                    "c": "world",
+                    "d": "2"
+                }
+            ]);
 }
 
 @test:Config
@@ -336,7 +339,7 @@ isolated function testAnydataAsExpTypeForParseString1() returns error? {
     string content = check io:fileReadString(FILE_PATH + "nested_10.yaml");
 
     anydata result = check parseString(content);
-    test:assertEquals(result, {"a":[{"c":"world","d":2}],"b":[{"c":"world","d":2}]});
+    test:assertEquals(result, {"a": [{"c": "world", "d": 2}], "b": [{"c": "world", "d": 2}]});
 }
 
 @test:Config
@@ -344,7 +347,7 @@ isolated function testAnydataAsExpTypeForParseString2() returns error? {
     string content = check io:fileReadString(FILE_PATH + "nested_11.yaml");
 
     anydata result = check parseString(content);
-    test:assertEquals(result, {"a":{"b":1,"d":{"e":false}},"c":2});
+    test:assertEquals(result, {"a": {"b": 1, "d": {"e": false}}, "c": 2});
 }
 
 @test:Config
@@ -943,7 +946,9 @@ isolated function testNilableTypeAsFieldTypeForParseAsType() returns error? {
 
 }
 
-@test:Config
+@test:Config {
+    groups: ["escaped"]
+}
 isolated function testEscapeCharacterCaseForParseString() returns error? {
     string jsonStr1 = string `
     {
@@ -971,4 +976,38 @@ isolated function testEscapeCharacterCaseForParseString() returns error? {
     };
 
     test:assertEquals(val1, expectedResult);
+}
+
+@test:Config {
+    dataProvider: escapedCharacterDataGen,
+    groups: ["escaped"]
+}
+function testEscapedCharacterToken(string lexeme, string value) returns error? {
+    string result = check parseString(string `"${lexeme}"`);
+    test:assertEquals(result, value);
+}
+
+function escapedCharacterDataGen() returns map<[string, string]> {
+    return {
+        "null": ["\\0", "\u{00}"],
+        "bell": ["\\a", "\u{07}"],
+        "backspace": ["\\b", "\u{08}"],
+        "horizontal-tab": ["\\t", "\t"],
+        "line-feed": ["\\n", "\n"],
+        "vertical-tab": ["\\v", "\u{0b}"],
+        "form-feed": ["\\f", "\u{0c}"],
+        "carriage-return": ["\\r", "\r"],
+        "escape": ["\\e", "\u{1b}"],
+        "double-quote": ["\\\"", "\""],
+        "slash": ["\\/", "/"],
+        "backslash": ["\\\\", "\\"],
+        "next-line": ["\\N", "\u{85}"],
+        "non-breaking-space": ["\\_", "\u{a0}"],
+        "line-separator": ["\\L", "\u{2028}"],
+        "paragraph-separator": ["\\P", "\u{2029}"],
+        "space": ["\\ ", " "],
+        "x-2": ["\\x41", "A"],
+        "u-4": ["\\u0041", "A"],
+        "U-8": ["\\U00000041", "A"]
+    };
 }
