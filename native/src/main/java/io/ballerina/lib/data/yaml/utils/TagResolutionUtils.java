@@ -38,7 +38,7 @@ public class TagResolutionUtils {
         if (value.equals("null")) {
             return null;
         }
-        throw new Error.YamlParserException("cannot cast " + value + "to null", state.getLine(), state.getColumn());
+        throw new Error.YamlParserException("cannot cast " + value + " to null", state.getLine(), state.getColumn());
     }
 
     public static Object constructNull(String value, YamlParser.ComposerState state)
@@ -46,7 +46,7 @@ public class TagResolutionUtils {
         if (isCoreSchemaNull(value)) {
             return null;
         }
-        throw new Error.YamlParserException("cannot cast " + value + "to null", state.getLine(), state.getColumn());
+        throw new Error.YamlParserException("cannot cast " + value + " to null", state.getLine(), state.getColumn());
     }
 
     public static Object constructSimpleBool(String value, YamlParser.ComposerState state)
@@ -56,7 +56,7 @@ public class TagResolutionUtils {
         } else if (value.equals("false")) {
             return false;
         }
-        throw new Error.YamlParserException("cannot cast " + value + "to boolean", state.getLine(), state.getColumn());
+        throw new Error.YamlParserException("cannot cast " + value + " to boolean", state.getLine(), state.getColumn());
     }
 
     public static Object constructBool(String value, YamlParser.ComposerState state)
@@ -67,7 +67,7 @@ public class TagResolutionUtils {
         } else if (isCoreSchemaFalse(value)) {
             return false;
         }
-        throw new Error.YamlParserException("cannot cast " + value + "to boolean", state.getLine(), state.getColumn());
+        throw new Error.YamlParserException("cannot cast " + value + " to boolean", state.getLine(), state.getColumn());
     }
 
     public static Object constructSimpleInt(String value, YamlParser.ComposerState state)
@@ -77,7 +77,7 @@ public class TagResolutionUtils {
         if (matcher.find()) {
             return Long.valueOf(value);
         }
-        throw new Error.YamlParserException("cannot cast " + value + "to int", state.getLine(), state.getColumn());
+        throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(), state.getColumn());
     }
 
     public static Object constructInt(String value, YamlParser.ComposerState state)
@@ -94,7 +94,7 @@ public class TagResolutionUtils {
         if (matcher.find()) {
             return Long.valueOf(value);
         }
-        throw new Error.YamlParserException("cannot cast " + value + "to int", state.getLine(), state.getColumn());
+        throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(), state.getColumn());
     }
 
     public static Object constructSimpleFloat(String value, YamlParser.ComposerState state)
@@ -104,7 +104,7 @@ public class TagResolutionUtils {
         if (matcher.find()) {
             return Double.parseDouble(value);
         }
-        throw new Error.YamlParserException("cannot cast " + value + "to float", state.getLine(), state.getColumn());
+        throw new Error.YamlParserException("cannot cast " + value + " to float", state.getLine(), state.getColumn());
     }
 
     public static Object constructFloat(String value, YamlParser.ComposerState state)
@@ -119,7 +119,7 @@ public class TagResolutionUtils {
                     return Double.POSITIVE_INFINITY;
                 }
             } else if (value.startsWith("+.") || value.startsWith("-.")) {
-                String valueSuffix = value.substring(1);
+                String valueSuffix = value.substring(2);
                 boolean isInfinity = valueSuffix.equals("inf") ||
                         valueSuffix.equals("Inf") || valueSuffix.equals("INF");
                 if (isInfinity) {
@@ -132,7 +132,7 @@ public class TagResolutionUtils {
         if (matcher.find()) {
             return Double.parseDouble(value);
         }
-        throw new Error.YamlParserException("cannot cast " + value + "to float", state.getLine(), state.getColumn());
+        throw new Error.YamlParserException("cannot cast " + value + " to float", state.getLine(), state.getColumn());
     }
 
     public static boolean isCoreSchemaNull(String value) {

@@ -827,7 +827,11 @@ public class YamlParser {
         if (mapOrSequenceScalar) {
             return output;
         }
-        processValue(state, scalarEvent.getValue());
+        if (output == null || output instanceof Double || output instanceof Long || output instanceof Boolean) {
+            state.currentYamlNode = Values.updateCurrentValueNode(state, state.currentYamlNode, output);
+        } else {
+            processValue(state, scalarEvent.getValue());
+        }
         return state.currentYamlNode;
     }
 

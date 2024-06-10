@@ -90,3 +90,23 @@ function simpleNegativeTestDataProvider() returns map<[string, string]> {
         ]
     };
 }
+
+@test:Config {
+    dataProvider: tagResolutionNegativeDataProvider
+}
+isolated function testTagResolutionNegative(string yaml, string expectedErrMsg, Options option) {
+    anydata|Error result = parseString(yaml, option);
+    test:assertTrue(result is Error);
+    test:assertEquals((<Error>result).message(), expectedErrMsg);
+}
+
+function tagResolutionNegativeDataProvider() returns [string, string, Options][] => [
+    ["!!null ()", "'cannot cast () to null' at line: '1' column: '8'", {schema: JSON_SCHEMA}],
+    ["!!bool yes", "'cannot cast yes to boolean' at line: '1' column: '9'", {schema: JSON_SCHEMA}],
+    ["!!int abc", "'cannot cast abc to int' at line: '1' column: '8'", {schema: JSON_SCHEMA}],
+    ["!!float abc", "'cannot cast abc to float' at line: '1' column: '10'", {schema: JSON_SCHEMA}],
+    ["!!null ()", "'cannot cast () to null' at line: '1' column: '8'", {}],
+    ["!!bool yes", "'cannot cast yes to boolean' at line: '1' column: '9'", {}],
+    ["!!int abc", "'cannot cast abc to int' at line: '1' column: '8'", {}],
+    ["!!float abc", "'cannot cast abc to float' at line: '1' column: '10'", {}]
+];

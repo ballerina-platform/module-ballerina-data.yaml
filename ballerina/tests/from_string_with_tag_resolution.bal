@@ -97,3 +97,29 @@ isolated function testTagResolutionWithRecordExpectedType() returns error? {
     };
     test:assertEquals(result, expectedResult);
 }
+
+@test:Config {
+    dataProvider: simpleTagResolutionDataProvider
+}
+isolated function testTagResolutionSimple(string yaml, anydata value, Options option) returns error? {
+    anydata result = check parseString(yaml, option);
+    test:assertEquals(result, value);
+}
+
+function simpleTagResolutionDataProvider() returns [string, anydata, Options][] => [
+    ["&anchor !!bool true", true, {}],
+    ["!!null null", (), {}],
+    ["!!int 12", 12, {}],
+    ["!!float .nan", float:NaN, {}],
+    ["!!float .NaN", float:NaN, {}],
+    ["!!float .NAN", float:NaN, {}],
+    ["!!float .inf", float:Infinity, {}],
+    ["!!float .Inf", float:Infinity, {}],
+    ["!!float .INF", float:Infinity, {}],
+    ["!!float +.inf", float:Infinity, {}],
+    ["!!float +.Inf", float:Infinity, {}],
+    ["!!float +.INF", float:Infinity, {}],
+    ["!!float -.inf", -float:Infinity, {}],
+    ["!!float -.Inf", -float:Infinity, {}],
+    ["!!float -.INF", -float:Infinity, {}]
+];
