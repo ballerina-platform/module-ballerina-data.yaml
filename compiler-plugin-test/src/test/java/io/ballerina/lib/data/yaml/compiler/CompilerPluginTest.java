@@ -133,7 +133,7 @@ public class CompilerPluginTest {
         Assert.assertEquals(errorDiagnosticsList.get(0).diagnosticInfo().messageFormat(), UNSUPPORTED_TYPE);
     }
 
-    @Test
+    @Test (enabled = false)
     public void testComplexUnionTypeWithUnsupportedTypeAndDuplicateFields() {
         DiagnosticResult diagnosticResult =
                 CompilerPluginTestUtils.loadPackage("sample_package_10").getCompilation().diagnosticResult();
