@@ -40,3 +40,22 @@ function negativeDataProvider() returns [string, string][] => [
         "'block mapping cannot have the same indent as a block sequence' at line: '3' column: '10'"
     ]
 ];
+
+@test:Config {
+    dataProvider: tagHandleNegativeDataProvider
+}
+isolated function tagHandleNegativeTests(string path, string expectedErrMsg) returns io:Error? {
+    string fullPath = NEGATIVE_TEST_PATH + "tag_handle_negative/" + path;
+    string content = check io:fileReadString(fullPath);
+    anydata|Error result = parseString(content);
+    test:assertTrue(result is Error);
+    test:assertEquals((<Error>result).message(), expectedErrMsg);
+}
+
+function tagHandleNegativeDataProvider() returns [string, string][] => [
+    ["tag_handle_negative_1.yaml", "'incompatible yaml version for the 1.2 parser' at line: '1' column: '9'"],
+    ["tag_handle_negative_2.yaml", "'incompatible yaml version for the 1.2 parser' at line: '1' column: '9'"],
+    ["tag_handle_negative_3.yaml", "'YAML document version is already defined' at line: '2' column: '5'"],
+    ["tag_handle_negative_4.yaml", "'duplicate tag handle' at line: '2' column: '12'"],
+    ["tag_handle_negative_5.yaml", "'custom tags not supported' at line: '1' column: '28'"]
+];

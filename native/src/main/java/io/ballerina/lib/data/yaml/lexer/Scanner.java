@@ -291,8 +291,7 @@ public class Scanner {
 
             // Scan the word of the name tag.
             if (matchPattern(sm, List.of(WORD_PATTERN, URI_PATTERN),
-                    List.of(new Utils.CharPattern('!'), FLOW_INDICATOR_PATTERN), 1)) {
-                sm.forward();
+                    List.of(new Utils.CharPattern('!'), FLOW_INDICATOR_PATTERN), 0)) {
                 sm.appendToLexeme(Character.toString(sm.peek()));
                 // Store the complete primary tag if another '!' cannot be detected.
                 if (differentiate && sm.peek(1) == -1) {
@@ -304,22 +303,20 @@ public class Scanner {
             }
 
             // Scan the end delimiter of the tag.
-            if (sm.peek(1) == '!') {
-                sm.forward();
+            if (sm.peek() == '!') {
                 sm.appendToLexeme("!");
                 return true;
             }
 
             // Store the complete primary tag if a white space or a flow indicator is detected.
-            if (differentiate && matchPattern(sm, List.of(FLOW_INDICATOR_PATTERN, WHITE_SPACE_PATTERN), 1)) {
+            if (differentiate && matchPattern(sm, List.of(FLOW_INDICATOR_PATTERN, WHITE_SPACE_PATTERN), 0)) {
                 sm.setLexemeBuffer(sm.getLexeme().substring(1));
                 sm.setLexeme("!");
                 return true;
             }
 
             // Store the complete primary tag if a hexadecimal escape is detected.
-            if (differentiate && sm.peek(1) == '%') {
-                sm.forward();
+            if (differentiate && sm.peek() == '%') {
                 scanUnicodeEscapedCharacters(sm, '%', 2);
                 sm.setLexemeBuffer(sm.getLexeme().substring(1));
                 sm.setLexeme("!");

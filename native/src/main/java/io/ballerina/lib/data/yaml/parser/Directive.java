@@ -21,6 +21,7 @@ package io.ballerina.lib.data.yaml.parser;
 
 import io.ballerina.lib.data.yaml.lexer.LexerState;
 import io.ballerina.lib.data.yaml.lexer.Token;
+import io.ballerina.lib.data.yaml.utils.Constants;
 import io.ballerina.lib.data.yaml.utils.Error;
 
 import java.util.List;
@@ -90,6 +91,10 @@ public class Directive {
         YamlParser.getNextToken(state, List.of(Token.TokenType.TAG_PREFIX));
         String tagPrefix = state.getCurrentToken().getValue();
 
+        if (!tagPrefix.equals(Constants.DEFAULT_GLOBAL_TAG_HANDLE)) {
+            throw new Error.YamlParserException("custom tags not supported", state.getLine(), state.getColumn());
+        }
+
         state.getCustomTagHandles().put(tagHandle, tagPrefix);
     }
 
@@ -108,9 +113,6 @@ public class Directive {
         while (state.getBufferedToken().getType() == Token.TokenType.SEPARATION_IN_LINE) {
             YamlParser.getNextToken(state);
             YamlParser.getNextToken(state, true);
-            if (state.getBufferedToken().getType() != Token.TokenType.PRINTABLE_CHAR) {
-                break;
-            }
             YamlParser.getNextToken(state);
             reservedDirective.append(" ").append(state.getCurrentToken().getValue());
             YamlParser.getNextToken(state, true);
