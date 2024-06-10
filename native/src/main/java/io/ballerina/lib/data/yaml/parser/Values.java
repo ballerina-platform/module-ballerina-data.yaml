@@ -97,6 +97,9 @@ public class Values {
     public static final Integer UNSIGNED16_MAX_VALUE = 65535;
     public static final Integer UNSIGNED8_MAX_VALUE = 255;
 
+    private Values() {
+    }
+
     static BMap<BString, Object> initRootMapValue(YamlParser.ComposerState state) {
         state.rootValueInitialized = true;
         Type expectedType = state.expectedTypes.peek();

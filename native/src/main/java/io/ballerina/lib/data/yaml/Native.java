@@ -47,6 +47,9 @@ import java.util.List;
  */
 public class Native {
 
+    private Native() {
+    }
+
     public static Object parseString(BString yaml, BMap<BString, Object> options, BTypedesc typed) {
         try {
             return YamlParser.compose(new StringReader(yaml.getValue()), options, typed.getDescribingType());

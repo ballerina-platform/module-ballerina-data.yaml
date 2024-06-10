@@ -33,6 +33,9 @@ import java.util.List;
  */
 public class Directive {
 
+    private Directive() {
+    }
+
     /**
      * Check the grammar productions for YAML directives.
      * Update the yamlVersion of the document.

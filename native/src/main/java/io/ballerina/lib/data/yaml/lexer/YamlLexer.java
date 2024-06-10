@@ -33,6 +33,9 @@ import static io.ballerina.lib.data.yaml.lexer.Utils.isTagChar;
  */
 public class YamlLexer {
 
+    private YamlLexer() {
+    }
+
     /**
      * Generate a Token for the next immediate lexeme.
      *

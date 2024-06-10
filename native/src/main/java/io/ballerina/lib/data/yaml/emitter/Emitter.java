@@ -36,6 +36,9 @@ import static io.ballerina.lib.data.yaml.utils.Constants.START_OF_YAML_DOCUMENT;
  */
 public class Emitter {
 
+    private Emitter() {
+    }
+
     /**
      * Represents the variables of the Emitter state.
      *

@@ -36,6 +36,9 @@ public class DiagnosticLog {
     private static final String ERROR = "Error";
     private static final ResourceBundle MESSAGES = ResourceBundle.getBundle("error", Locale.getDefault());
 
+    private DiagnosticLog() {
+    }
+
     public static BError error(DiagnosticErrorCode code, Object... args) {
         String msg = formatMessage(code, args);
         return getYamlError(msg);

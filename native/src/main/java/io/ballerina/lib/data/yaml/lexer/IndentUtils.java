@@ -32,6 +32,9 @@ import java.util.List;
  */
 public class IndentUtils {
 
+    private IndentUtils() {
+    }
+
     public record Indent(int column, Collection collection) {
     }
 

@@ -49,4 +49,7 @@ public class Constants {
     public static final BString STRICT_TUPLE_ORDER = StringUtils.fromString("strictTupleOrder");
     public static final BString END_OF_YAML_DOCUMENT = StringUtils.fromString("...");
     public static final BString START_OF_YAML_DOCUMENT = StringUtils.fromString("---");
+
+    private Constants() {
+    }
 }

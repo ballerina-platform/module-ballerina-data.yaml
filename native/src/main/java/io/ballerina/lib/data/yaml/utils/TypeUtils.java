@@ -8,6 +8,9 @@ import io.ballerina.runtime.api.values.BValue;
 
 public class TypeUtils {
 
+    private TypeUtils() {
+    }
+
     public static Type getType(Object value) {
         if (value == null) {
             return PredefinedTypes.TYPE_NULL;

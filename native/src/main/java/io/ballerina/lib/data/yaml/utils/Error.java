@@ -25,6 +25,9 @@ package io.ballerina.lib.data.yaml.utils;
  */
 public class Error {
 
+    private Error() {
+    }
+
     public static class YamlParserException extends Exception {
         private final int line;
         private final int column;

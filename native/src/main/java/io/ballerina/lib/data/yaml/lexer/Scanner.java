@@ -44,6 +44,9 @@ import static io.ballerina.lib.data.yaml.lexer.Utils.matchPattern;
  */
 public class Scanner {
 
+    private Scanner() {
+    }
+
     public static final Scan ANCHOR_NAME_SCANNER = new AnchorNameScanner();
     public static final Scan PLANAR_CHAR_SCANNER = new PlanarCharScanner();
     public static final Scan URI_SCANNER = new UriScanner(false);

@@ -63,6 +63,9 @@ public class Serializer {
         }
     }
 
+    private Serializer() {
+    }
+
     public static void serialize(SerializerState state, Object data) {
         serialize(state, data, 0, null);
     }

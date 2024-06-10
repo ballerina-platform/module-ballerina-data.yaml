@@ -30,6 +30,9 @@ import java.util.regex.Pattern;
  */
 public class TagResolutionUtils {
 
+    private TagResolutionUtils() {
+    }
+
     public static Object constructSimpleNull(String value, YamlParser.ComposerState state)
             throws Error.YamlParserException {
         if (value.equals("null")) {

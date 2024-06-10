@@ -29,6 +29,9 @@ import io.ballerina.runtime.api.values.BString;
  */
 public class OptionsUtils {
 
+    private OptionsUtils() {
+    }
+
     public record WriteConfig(int indentationPolicy, int blockLevel, boolean canonical, boolean useSingleQuotes,
                               boolean forceQuotes, Types.YAMLSchema schema, boolean isStream, boolean flowStyle) {
     }

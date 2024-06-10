@@ -25,6 +25,9 @@ package io.ballerina.lib.data.yaml.common;
  */
 public class Types {
 
+    private Types() {
+    }
+
     public enum Collection {
         STREAM,
         SEQUENCE,

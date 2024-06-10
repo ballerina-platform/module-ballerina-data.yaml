@@ -39,6 +39,9 @@ public class Utils {
     public static final Pattern INDICATOR_PATTERN = new IndicatorPattern();
     public static final Pattern URI_PATTERN = new UriPattern();
 
+    private Utils() {
+    }
+
     public static boolean matchPattern(LexerState sm, List<Pattern> inclusionPatterns) {
         return matchPattern(sm, inclusionPatterns, List.of(), 0);
     }

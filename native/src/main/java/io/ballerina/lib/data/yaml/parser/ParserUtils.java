@@ -44,6 +44,8 @@ public class ParserUtils {
     public static final String NAME = "Name";
     public static final BString VALUE = StringUtils.fromString("value");
 
+    private ParserUtils() {
+    }
     public static Map<String, Field> getAllFieldsInRecord(RecordType recordType) {
         BMap<BString, Object> annotations = recordType.getAnnotations();
         Map<String, String> modifiedNames = new HashMap<>();
