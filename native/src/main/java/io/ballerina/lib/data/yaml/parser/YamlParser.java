@@ -605,7 +605,7 @@ public class YamlParser {
             composeDocument(state, event);
             event = getNextYamlDocEvent(state);
 
-            if (!isTupleExpected) {
+            if (!isTupleExpected || state.strictTupleOrder) {
                 state.updateIndexOfArrayElement();
             }
             if (!processFirstElement && state.expectedTypes.size() > 1) {
