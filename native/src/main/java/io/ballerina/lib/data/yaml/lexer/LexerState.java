@@ -83,7 +83,7 @@ public class LexerState {
     public static final State LEXER_DOUBLE_QUOTE = new DoubleQuoteState();
     public static final State LEXER_SINGLE_QUOTE = new SingleQuoteState();
     public static final State LEXER_BLOCK_HEADER = new BlockHeaderState();
-    public static final State LEXER_LITERAL = new LiteralState();
+    public static final State LEXER_BLOCK_SCALAR = new BlockScalarState();
     public static final State LEXER_RESERVED_DIRECTIVE = new ReservedDirectiveState();
     private State state = LEXER_START_STATE;
     private final CharacterReader characterReader;
@@ -764,6 +764,10 @@ public class LexerState {
                 }
             }
 
+            if (Scanner.scanAndTokenizeEOL(lexerState, EMPTY_LINE)) {
+                return this;
+            }
+
             // Terminating delimiter
             if (lexerState.peek() == '\"') {
                 IndentUtils.handleMappingValueIndent(lexerState, DOUBLE_QUOTE_DELIMITER);
@@ -807,6 +811,10 @@ public class LexerState {
                 if (lexerState.firstLine) {
                     lexerState.lexeme += whitespace;
                 }
+            }
+
+            if (Scanner.scanAndTokenizeEOL(lexerState, EMPTY_LINE)) {
+                return this;
             }
 
             // Escaped single quote
@@ -878,7 +886,7 @@ public class LexerState {
         }
     }
 
-    private static class LiteralState implements State {
+    private static class BlockScalarState implements State {
 
         /**
          * Scan the lexemes for block scalar.
@@ -906,6 +914,10 @@ public class LexerState {
                     return LexerState.LEXER_START_STATE.transition(lexerState);
                 }
 
+                if (Scanner.scanAndTokenizeEOL(lexerState, EMPTY_LINE)) {
+                    return this;
+                }
+
                 switch (lexerState.peek()) {
                     case '#' -> { // Generate beginning of the trailing comment
                         if (!lexerState.trailingComment && lexerState.captureIndent) {
@@ -928,11 +940,6 @@ public class LexerState {
                     case ':', '-' -> {
                         return LexerState.LEXER_START_STATE.transition(lexerState);
                     }
-                    case -1 -> { // Empty lines are allowed in trailing comments
-                        lexerState.forward();
-                        lexerState.tokenize(EMPTY_LINE);
-                        return this;
-                    }
                     default -> { // Other characters are not allowed when the indentation is less
                         throw new Error.YamlParserException("insufficient indent to process literal characters",
                                 lexerState.getLine(), lexerState.getColumn());
@@ -942,17 +949,16 @@ public class LexerState {
 
             if (lexerState.trailingComment) {
                 while (true) {
+                    if (Scanner.scanAndTokenizeEOL(lexerState, EMPTY_LINE)) {
+                        return this;
+                    }
+
                     switch (lexerState.peek()) {
                         case ' ' -> { // Ignore whitespace
                             lexerState.forward();
                         }
                         case '#' -> { // Generate beginning of the trailing comment
                             lexerState.tokenize(EOL);
-                            return this;
-                        }
-                        case -1 -> { // Empty lines are allowed in trailing comments
-                            lexerState.forward();
-                            lexerState.tokenize(EMPTY_LINE);
                             return this;
                         }
                         default -> {

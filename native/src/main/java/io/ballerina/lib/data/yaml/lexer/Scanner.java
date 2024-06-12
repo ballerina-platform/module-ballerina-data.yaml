@@ -141,7 +141,7 @@ public class Scanner {
          * Process double quoted scalar values.
          */
         @Override
-        public boolean scan(LexerState sm) {
+        public boolean scan(LexerState sm) throws Error.YamlParserException {
             // Process nb-json characters
             if (matchPattern(sm, List.of(JSON_PATTERN), List.of(new Utils.CharPattern('\'')))) {
                 sm.appendToLexeme(Character.toString(sm.peek()));
@@ -155,9 +155,14 @@ public class Scanner {
                     sm.forward();
                     return false;
                 }
+                return true;
             }
 
-            return true;
+            if (Utils.isNewLine(sm)) {
+                return true;
+            }
+
+            throw new Error.YamlParserException("invalid character", sm.getLine(), sm.getColumn());
         }
     }
 
@@ -185,7 +190,15 @@ public class Scanner {
                 return false;
             }
 
-            return true;
+            if (sm.peek() == '\"') {
+                return true;
+            }
+
+            if (Utils.isNewLine(sm)) {
+                return true;
+            }
+
+            throw new Error.YamlParserException("invalid character", sm.getLine(), sm.getColumn());
         }
     }
 

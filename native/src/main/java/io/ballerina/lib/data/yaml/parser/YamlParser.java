@@ -77,13 +77,11 @@ import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.DOUBLE_QUOTE_DELI
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.EMPTY_LINE;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.EOL;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.FOLDED;
-import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.MAPPING_END;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.MAPPING_KEY;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.MAPPING_VALUE;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.PLANAR_CHAR;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEPARATION_IN_LINE;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEPARATOR;
-import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEQUENCE_END;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SEQUENCE_ENTRY;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.SINGLE_QUOTE_DELIMITER;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.TAG;
@@ -1345,7 +1343,7 @@ public class YamlParser {
                 return new YamlEvent.EndEvent(Collection.MAPPING);
             }
             case LITERAL, FOLDED -> {
-                state.updateLexerState(LexerState.LEXER_LITERAL);
+                state.updateLexerState(LexerState.LEXER_BLOCK_SCALAR);
                 return appendData(state, option, true);
             }
         }
@@ -1909,7 +1907,7 @@ public class YamlParser {
             }
         }
 
-        state.getLexerState().updateLexerState(LexerState.LEXER_LITERAL);
+        state.getLexerState().updateLexerState(LexerState.LEXER_BLOCK_SCALAR);
         StringBuilder lexemeBuffer = new StringBuilder();
         StringBuilder newLineBuffer = new StringBuilder();
         boolean isFirstLine = true;
@@ -2185,10 +2183,8 @@ public class YamlParser {
                     }
                     state.getLexerState().setFirstLine(false);
                 }
-                default -> {
-                    throw new Error.YamlParserException("invalid double quote scalar",
-                            state.getLine(), state.getColumn());
-                }
+                default -> throw new Error.YamlParserException("invalid double quote scalar",
+                        state.getLine(), state.getColumn());
             }
             getNextToken(state);
         }
@@ -2283,10 +2279,8 @@ public class YamlParser {
                     }
                     state.getLexerState().setFirstLine(false);
                 }
-                default -> {
-                    throw new Error.YamlParserException("invalid single quote character",
-                            state.getLine(), state.getColumn());
-                }
+                default -> throw new Error.YamlParserException("invalid single quote character",
+                        state.getLine(), state.getColumn());
             }
             getNextToken(state);
         }

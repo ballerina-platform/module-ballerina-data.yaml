@@ -253,4 +253,8 @@ public class Utils {
         }
         return whitespace.toString();
     }
+
+    public static boolean isNewLine(LexerState sm) {
+        return sm.peek() == '\n' || sm.peek() == '\r' && sm.peek(1) == '\n';
+    }
 }

@@ -746,6 +746,18 @@ isolated function testBlockScalarValue() returns error? {
 }
 
 @test:Config
+isolated function testParsingEmptyLines() returns error? {
+    string content = check io:fileReadString(FILE_PATH + "nested_20.yaml");
+    map<string> value = check parseString(content);
+    map<string> expectedResult = {
+        "FoldingDoubleQuote": "Empty line\nas a line feed",
+        "FoldingSingleQuote": "Empty line\nas a line feed",
+        "Chomping": "Clipped empty lines\n"
+    };
+    test:assertEquals(value, expectedResult);
+}
+
+@test:Config
 isolated function testByteAsExpectedTypeForParseString() returns error? {
     byte result = check parseString("1");
     test:assertEquals(result, 1);
