@@ -46,7 +46,29 @@ function negativeDataProvider() returns [string, string][] => [
     ["negative_test_11.yaml", "'unexpected event' at line: '1' column: '8'"],
     ["negative_test_12.yaml", "'unexpected event error' at line: '1' column: '5'"],
     ["negative_test_13.yaml", "'cannot have block sequence under flow collection' at line: '2' column: '3'"],
-    ["negative_test_14.yaml", "''-' cannot be defined after tag properties' at line: '1' column: '7'"]
+    ["negative_test_14.yaml", "''-' cannot be defined after tag properties' at line: '1' column: '7'"],
+    [
+        "negative_test_15.yaml",
+        "'invalid token 'DOCUMENT_MARKER' inside the double-quoted scalar'" +
+        " at line: '3' column: '3'"
+    ],
+    [
+        "negative_test_16.yaml",
+        "'invalid token 'DIRECTIVE_MARKER' inside the double-quoted scalar'" +
+        " at line: '3' column: '3'"
+    ],
+    [
+        "negative_test_17.yaml",
+        "'invalid token 'DOCUMENT_MARKER' inside the single-quoted scalar'" +
+        " at line: '3' column: '3'"
+    ],
+    [
+        "negative_test_18.yaml",
+        "'invalid token 'DIRECTIVE_MARKER' inside the single-quoted scalar'" +
+        " at line: '3' column: '3'"
+    ],
+    ["negative_test_19.yaml", "'invalid block header' at line: '1' column: '10'"]
+
 ];
 
 @test:Config {

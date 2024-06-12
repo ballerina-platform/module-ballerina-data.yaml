@@ -2183,8 +2183,11 @@ public class YamlParser {
                     }
                     state.getLexerState().setFirstLine(false);
                 }
-                default -> throw new Error.YamlParserException("invalid double quote scalar",
-                        state.getLine(), state.getColumn());
+                default -> {
+                    String errorMsg = "invalid token '" + state.getCurrentToken().getType()
+                            + "' inside the double-quoted scalar";
+                    throw new Error.YamlParserException(errorMsg, state.getLine(), state.getColumn());
+                }
             }
             getNextToken(state);
         }
@@ -2220,7 +2223,8 @@ public class YamlParser {
         }
     }
 
-    /** Parse the string of a single-quoted scalar.
+    /**
+     * Parse the string of a single-quoted scalar.
      *
      * @param state - Current parser state
      * @return - Parsed single-quoted scalar value
@@ -2279,8 +2283,11 @@ public class YamlParser {
                     }
                     state.getLexerState().setFirstLine(false);
                 }
-                default -> throw new Error.YamlParserException("invalid single quote character",
-                        state.getLine(), state.getColumn());
+                default -> {
+                    String errorMsg = "invalid token '" + state.getCurrentToken().getType()
+                            + "' inside the single-quoted scalar";
+                    throw new Error.YamlParserException(errorMsg, state.getLine(), state.getColumn());
+                }
             }
             getNextToken(state);
         }

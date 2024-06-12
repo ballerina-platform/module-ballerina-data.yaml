@@ -754,9 +754,7 @@ public class LexerState {
             // Check for empty lines
             if (WHITE_SPACE_PATTERN.pattern(lexerState.peek())) {
                 String whitespace = getWhitespace(lexerState);
-                if (lexerState.peek() == -1) {
-                    lexerState.forward();
-                    lexerState.tokenize(EMPTY_LINE);
+                if (Scanner.scanAndTokenizeEOL(lexerState, EMPTY_LINE)) {
                     return this;
                 }
                 if (lexerState.firstLine) {
@@ -803,18 +801,12 @@ public class LexerState {
             // Check for empty lines
             if (WHITE_SPACE_PATTERN.pattern(lexerState.peek())) {
                 String whitespace = getWhitespace(lexerState);
-                if (lexerState.peek() == -1) {
-                    lexerState.forward();
-                    lexerState.tokenize(EMPTY_LINE);
+                if (Scanner.scanAndTokenizeEOL(lexerState, EMPTY_LINE)) {
                     return this;
                 }
                 if (lexerState.firstLine) {
                     lexerState.lexeme += whitespace;
                 }
-            }
-
-            if (Scanner.scanAndTokenizeEOL(lexerState, EMPTY_LINE)) {
-                return this;
             }
 
             // Escaped single quote

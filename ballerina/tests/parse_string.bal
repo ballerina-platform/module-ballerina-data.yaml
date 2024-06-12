@@ -751,7 +751,8 @@ isolated function testParsingEmptyLines() returns error? {
     map<string> value = check parseString(content);
     map<string> expectedResult = {
         "FoldingDoubleQuote": "Empty line\nas a line feed",
-        "FoldingSingleQuote": "Empty line\nas a line feed",
+        "FoldingSingleQuote": "Empty line\n'as a line 'feed",
+        "FoldingSingleQuote2": "Empty line\n'",
         "Chomping": "Clipped empty lines\n"
     };
     test:assertEquals(value, expectedResult);
