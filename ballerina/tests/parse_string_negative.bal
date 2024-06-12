@@ -38,7 +38,14 @@ function negativeDataProvider() returns [string, string][] => [
     [
         "negative_test_6.yaml",
         "'block mapping cannot have the same indent as a block sequence' at line: '3' column: '10'"
-    ]
+    ],
+    ["negative_test_7.yaml", "'there can only be one root event to a document' at line: '2' column: '10'"],
+    ["negative_test_8.yaml", "'expected a key for the block mapping' at line: '2' column: '4'"],
+    ["negative_test_9.yaml", "'anchor does not exist' at line: '1' column: '15'"],
+    ["negative_test_10.yaml", "'unexpected event' at line: '1' column: '10'"],
+    ["negative_test_11.yaml", "'unexpected event' at line: '1' column: '8'"],
+    ["negative_test_12.yaml", "'unexpected event error' at line: '1' column: '5'"],
+    ["negative_test_13.yaml", "'cannot have block sequence under flow collection' at line: '2' column: '3'"]
 ];
 
 @test:Config {
@@ -58,7 +65,10 @@ function tagHandleNegativeDataProvider() returns [string, string][] => [
     ["tag_handle_negative_3.yaml", "'YAML document version is already defined' at line: '2' column: '5'"],
     ["tag_handle_negative_4.yaml", "'duplicate tag handle' at line: '2' column: '12'"],
     ["tag_handle_negative_5.yaml", "'custom tags not supported' at line: '1' column: '28'"],
-    ["tag_handle_negative_6.yaml", "'invalid digit character' at line: '1' column: '9'"]
+    ["tag_handle_negative_6.yaml", "'invalid digit character' at line: '1' column: '9'"],
+    ["tag_handle_negative_7.yaml", "'invalid directive document' at line: '2' column: '1'"],
+    ["tag_handle_negative_8.yaml", "'invalid document' at line: '1' column: '8'"],
+    ["tag_handle_negative_9.yaml", "'directives are not allowed in a bare document' at line: '3' column: '5'"]
 ];
 
 @test:Config {

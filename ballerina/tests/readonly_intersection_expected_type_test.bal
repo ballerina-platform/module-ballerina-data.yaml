@@ -90,9 +90,9 @@ type tuple2Readonly [[float, string], [boolean, decimal]...] & readonly;
 
 type stringArrayTypeReadonly string[] & readonly;
 
-type Rec1ReadOnly Rec1 & readonly;
+type Rec1ReadOnly readonly & readonly & Rec1;
 
-type Rec2ReadOnly Rec2 & readonly;
+type Rec2ReadOnly readonly & Rec2 & readonly;
 
 type Rec3ReadOnly Rec3 & readonly;
 

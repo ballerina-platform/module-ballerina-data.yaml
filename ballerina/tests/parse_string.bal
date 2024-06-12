@@ -717,13 +717,24 @@ isolated function testSingletonAsExpectedTypeForParseString() returns error? {
 }
 
 @test:Config
-function testDuplicateKeyInTheStringSource() returns error? {
+isolated function testDuplicateKeyInTheStringSource() returns error? {
 
 }
 
 @test:Config
-function testNameAnnotationWithParseString() returns error? {
+isolated function testNameAnnotationWithParseString() returns error? {
 
+}
+
+@test:Config
+isolated function testTupleNestedMappingWithProjection1() returns error? {
+    string content = check io:fileReadString(FILE_PATH + "nested_18.yaml");
+    ParentRecord1 value = check parseString(content);
+    ParentRecord1 expectedResult = {
+        a: [{"key1": "value1"}, {"key2": "value2"}],
+        b: "value"
+    };
+    test:assertEquals(value, expectedResult);
 }
 
 @test:Config
@@ -1019,3 +1030,28 @@ function complexMappingKeyDataProvider() returns [string, anydata][] => [
     ["complex_mapping_key_1.yaml", {"key": (), "key2": "value"}],
     ["complex_mapping_key_2.yaml", {"data": {"key": (), "key2": "value"}}]
 ];
+
+@test:Config {
+    dataProvider: complexExpectedTypeHandlingDataProvider
+}
+isolated function testHandlingComplexExpectedTypes(string sourceData,
+        typedesc<anydata> expectedType, anydata expectedResult) returns error? {
+    anydata actualResult = check parseString(sourceData, {}, expectedType);
+    test:assertEquals(actualResult, expectedResult);
+}
+
+function complexExpectedTypeHandlingDataProvider() returns [string, typedesc<anydata>, anydata][] => [
+    ["foo", ComplexUnion1, "foo"],
+    ["foo", ComplexUnion2, "foo"]
+];
+
+@test:Config
+isolated function testEmptyMappingKey() returns error? {
+    anydata expectedValue = {"null": "value"};
+
+    anydata result1 = check parseString(": value");
+    test:assertEquals(result1, expectedValue);
+
+    anydata result2 = check parseString("{: value}");
+    test:assertEquals(result2, expectedValue);
+}

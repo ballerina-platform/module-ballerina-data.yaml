@@ -213,8 +213,11 @@ public class Values {
         Type currentJsonNodeType = TypeUtils.getType(currentYaml);
         switch (currentJsonNodeType.getTag()) {
             case TypeTags.MAP_TAG, TypeTags.RECORD_TYPE_TAG -> {
-                ((BMap<BString, Object>) currentYaml).put(StringUtils.fromString(sm.fieldNameHierarchy.peek().pop()),
-                        convertedValue);
+                BString fieldName = StringUtils.fromString(sm.fieldNameHierarchy.peek().pop());
+                if (fieldName == null) {
+                    fieldName = StringUtils.fromString("null");
+                }
+                ((BMap<BString, Object>) currentYaml).put(fieldName, convertedValue);
                 return currentYaml;
             }
             case TypeTags.ARRAY_TAG -> {

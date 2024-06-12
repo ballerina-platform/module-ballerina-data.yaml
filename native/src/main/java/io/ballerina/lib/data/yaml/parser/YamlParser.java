@@ -96,7 +96,7 @@ import static io.ballerina.lib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_
 import static io.ballerina.lib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_SEQUENCE_VALUE;
 import static io.ballerina.lib.data.yaml.parser.ParserUtils.getAllFieldsInRecord;
 import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_GLOBAL_TAG_HANDLE;
-import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_LOCAL_TAG_HANDLE;
+import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_TAG_HANDLES;
 
 /**
  * Core parsing of YAML strings.
@@ -105,8 +105,8 @@ import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_LOCAL_TAG_HANDL
  */
 public class YamlParser {
 
-    public static final Map<String, String> DEFAULT_TAG_HANDLES = Map.of("!", DEFAULT_LOCAL_TAG_HANDLE,
-            "!!", DEFAULT_GLOBAL_TAG_HANDLE);
+    private YamlParser() {
+    }
 
     public static class ComposerState {
         private final ParserState parserState;
@@ -345,21 +345,13 @@ public class YamlParser {
             if (referredTypeTag == TypeTags.ARRAY_TAG || referredType.getTag() == TypeTags.TUPLE_TAG
                 || referredTypeTag == TypeTags.ANYDATA_TAG || referredTypeTag == TypeTags.JSON_TAG) {
                 return true;
-            } else if (referredTypeTag == TypeTags.UNION_TAG) {
-                for (Type memberType : ((UnionType) type).getMemberTypes()) {
-                    if (hasMemberWithArraySubType(memberType)) {
-                        return true;
-                    }
-                }
             } else if (referredTypeTag == TypeTags.INTERSECTION_TAG) {
-                for (Type constituentType : ((IntersectionType) type).getConstituentTypes()) {
+                for (Type constituentType : ((IntersectionType) referredType).getConstituentTypes()) {
                     if (constituentType.getTag() == TypeTags.READONLY_TAG) {
                         continue;
                     }
                     return hasMemberWithArraySubType(constituentType);
                 }
-            } else if (referredTypeTag == TypeTags.TYPE_REFERENCED_TYPE_TAG) {
-                return hasMemberWithArraySubType(TypeUtils.getReferredType(type));
             }
             return false;
         }
@@ -484,7 +476,7 @@ public class YamlParser {
         Object output = composeNode(state, event, false);
 
         // Return an error if there is another root event
-        event = handleEvent(state);
+        event = handleEvent(state, BARE_DOCUMENT);
         if (ParserUtils.isStreamEndEvent(event)) {
             return handleOutput(state, output);
         }
@@ -801,19 +793,12 @@ public class YamlParser {
         if (eventKind == YamlEvent.EventKind.START_EVENT) {
             YamlEvent.StartEvent startEvent = (YamlEvent.StartEvent) event;
 
-            switch (startEvent.getStartType()) {
-                case SEQUENCE -> {
-                    output = castData(state, composeSequence(state, startEvent.isFlowStyle()),
-                            Types.FailSafeSchema.SEQUENCE, event.getTag());
-                }
-                case MAPPING -> {
-                    output = castData(state, composeMapping(state, startEvent.isFlowStyle(), startEvent.isImplicit()),
-                            Types.FailSafeSchema.MAPPING, event.getTag());
-                }
-                default -> {
-                    throw new Error.YamlParserException("only sequence and mapping are allowed as node start events",
-                            state.getLine(), state.getColumn());
-                }
+            if (startEvent.getStartType() == SEQUENCE) {
+                output = castData(state, composeSequence(state, startEvent.isFlowStyle()),
+                        Types.FailSafeSchema.SEQUENCE, event.getTag());
+            } else {
+                output = castData(state, composeMapping(state, startEvent.isFlowStyle(), startEvent.isImplicit()),
+                        Types.FailSafeSchema.MAPPING, event.getTag());
             }
             checkAnchor(state, event, output);
             return state.currentYamlNode;
@@ -855,11 +840,7 @@ public class YamlParser {
     public static Object composeSequence(YamlParser.ComposerState state, boolean flowStyle)
             throws Error.YamlParserException {
         boolean firstElement = true;
-        if (!state.rootValueInitialized) {
-            state.currentYamlNode = Values.initRootArrayValue(state);
-        } else {
-            Values.updateNextArrayValueBasedOnExpType(state);
-        }
+        Values.updateNextArrayValueBasedOnExpType(state);
 
         YamlEvent event = handleEvent(state, EXPECT_SEQUENCE_VALUE);
 
@@ -1126,23 +1107,8 @@ public class YamlParser {
         return data;
     }
 
-
     /**
-     * Obtain an event for the for a set of tokens.
-     *
-     * @param state - Current parser state
-     * @return - Parsed event
-     */
-    private static YamlEvent handleEvent(ComposerState state) throws Error.YamlParserException {
-        if (state.terminatedDocEvent != null &&
-                state.terminatedDocEvent.getKind() == YamlEvent.EventKind.DOCUMENT_MARKER_EVENT) {
-            return state.terminatedDocEvent;
-        }
-        return parse(state.parserState, ParserUtils.ParserOption.DEFAULT, BARE_DOCUMENT);
-    }
-
-    /**
-     * Obtain an event for the for a set of tokens.
+     * Obtain an event for a set of tokens.
      *
      * @param state - Current parser state
      * @param docType - Document type to be parsed
@@ -1158,7 +1124,7 @@ public class YamlParser {
     }
 
     /**
-     * Obtain an event for the for a set of tokens.
+     * Obtain an event for a set of tokens.
      *
      * @param state - Current parser state
      * @param option - Expected values inside a mapping collection
@@ -1174,7 +1140,7 @@ public class YamlParser {
     }
 
     /**
-     * Obtain an event for the for a set of tokens.
+     * Obtain an event for a set of tokens.
      *
      * @param state - Current parser state
      * @param option - Expected values inside a mapping collection
@@ -1217,8 +1183,8 @@ public class YamlParser {
         // Only directive tokens are allowed in directive document
         if (currentTokenType != DIRECTIVE && currentTokenType != DIRECTIVE_MARKER) {
             if (docType == DIRECTIVE_DOCUMENT) {
-                throw new Error.YamlParserException("'${state.currentToken.token}' " +
-                        "is not allowed in a directive document", state.getLine(), state.getColumn());
+                throw new Error.YamlParserException("invalid directive document",
+                        state.getLine(), state.getColumn());
             }
         }
 
@@ -1360,9 +1326,6 @@ public class YamlParser {
                     Token.TokenType bufferedTokenType = state.getBufferedToken().getType();
                     if (bufferedTokenType == SEPARATOR) {
                         getNextToken(state);
-                    } else if (bufferedTokenType != MAPPING_END && bufferedTokenType != SEQUENCE_END) {
-                        throw new Error.YamlParserException("unexpected token error",
-                                state.getLine(), state.getColumn());
                     }
                 }
                 return new YamlEvent.EndEvent(SEQUENCE);
@@ -1377,9 +1340,6 @@ public class YamlParser {
                     Token.TokenType bufferedTokenType = state.getBufferedToken().getType();
                     if (bufferedTokenType == SEPARATOR) {
                         getNextToken(state);
-                    } else if (bufferedTokenType != MAPPING_END && bufferedTokenType != SEQUENCE_END) {
-                        throw new Error.YamlParserException("unexpected token error",
-                                state.getLine(), state.getColumn());
                     }
                 }
                 return new YamlEvent.EndEvent(Collection.MAPPING);
@@ -1390,8 +1350,7 @@ public class YamlParser {
             }
         }
 
-        throw new Error.YamlParserException("`Invalid token '${state.currentToken.token}' " +
-                "as the first for generating an event", state.getLine(), state.getColumn());
+        throw new Error.YamlParserException("invalid token", state.getLine(), state.getColumn());
     }
 
     /** Verifies the grammar production for separation between nodes.

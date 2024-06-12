@@ -21,6 +21,8 @@ package io.ballerina.lib.data.yaml.utils;
 import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.values.BString;
 
+import java.util.Map;
+
 /**
  * Constants for yaml data.
  *
@@ -30,6 +32,8 @@ public class Constants {
 
     public static final String DEFAULT_LOCAL_TAG_HANDLE = "!";
     public static final String DEFAULT_GLOBAL_TAG_HANDLE = "tag:yaml.org,2002:";
+    public static final Map<String, String> DEFAULT_TAG_HANDLES = Map.of("!", DEFAULT_LOCAL_TAG_HANDLE,
+            "!!", DEFAULT_GLOBAL_TAG_HANDLE);
     public static final String DEFAULT_GLOBAL_SEQ_TAG_HANDLE = DEFAULT_GLOBAL_TAG_HANDLE + "seq";
     public static final String DEFAULT_GLOBAL_MAP_TAG_HANDLE = DEFAULT_GLOBAL_TAG_HANDLE + "map";
     public static final String DEFAULT_GLOBAL_STR_TAG_HANDLE = DEFAULT_GLOBAL_TAG_HANDLE + "str";

@@ -94,3 +94,12 @@ type SingletonInRecord record {|
     Singleton1 value;
     SingletonUnion id;
 |};
+
+type ParentRecord1 record {|
+    [OpenRecord & readonly, OpenRecord & readonly] a;
+    string b;
+|};
+
+type IntersecionType readonly & OpenRecord;
+type ComplexUnion1 string|IntersecionType|string[];
+type ComplexUnion2 string|IntersecionType|[string, string];
