@@ -1,5 +1,5 @@
 name: "Jhon"
-description: |
+description: |   # comment
   This is a multiline
   string in YAML.
   It preserves line breaks.

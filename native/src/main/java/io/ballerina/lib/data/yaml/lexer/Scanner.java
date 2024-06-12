@@ -549,4 +549,18 @@ public class Scanner {
             sm.forward();
         }
     }
+
+    public static boolean scanAndTokenizeEOL(LexerState state, Token.TokenType token) {
+        if (state.peek() == '\n' || state.peek() == -1) {
+            state.forward();
+            state.tokenize(token);
+            return true;
+        }
+        if (state.peek() == '\r' && state.peek(1) == '\n') {
+            state.forward(2);
+            state.tokenize(token);
+            return true;
+        }
+        return false;
+    }
 }

@@ -32,7 +32,7 @@ isolated function negtiveTests(string path, string expectedErrMsg) returns io:Er
 function negativeDataProvider() returns [string, string][] => [
     ["negative_test_1.yaml", "'non printable character found' at line: '2' column: '13'"],
     ["negative_test_2.yaml", "'invalid indentation' at line: '5' column: '5'"],
-    ["negative_test_3.yaml", "'invalid block header' at line: '1' column: '2'"],
+    ["negative_test_3.yaml", "'insufficient indentation for a scalar' at line: '2' column: '4'"],
     ["negative_test_4.yaml", "'insufficient indentation for a scalar' at line: '3' column: '4'"],
     ["negative_test_5.yaml", "'insufficient indentation for a scalar' at line: '4' column: '4'"],
     [
@@ -45,7 +45,8 @@ function negativeDataProvider() returns [string, string][] => [
     ["negative_test_10.yaml", "'unexpected event' at line: '1' column: '10'"],
     ["negative_test_11.yaml", "'unexpected event' at line: '1' column: '8'"],
     ["negative_test_12.yaml", "'unexpected event error' at line: '1' column: '5'"],
-    ["negative_test_13.yaml", "'cannot have block sequence under flow collection' at line: '2' column: '3'"]
+    ["negative_test_13.yaml", "'cannot have block sequence under flow collection' at line: '2' column: '3'"],
+    ["negative_test_14.yaml", "''-' cannot be defined after tag properties' at line: '1' column: '7'"]
 ];
 
 @test:Config {

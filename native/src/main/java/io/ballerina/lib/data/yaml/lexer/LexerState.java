@@ -26,6 +26,7 @@ import java.util.Stack;
 
 import static io.ballerina.lib.data.yaml.lexer.Scanner.COMMENT_SCANNER;
 import static io.ballerina.lib.data.yaml.lexer.Scanner.VERBATIM_URI_SCANNER;
+import static io.ballerina.lib.data.yaml.lexer.Scanner.WHITE_SPACE_SCANNER;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.ALIAS;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.ANCHOR;
 import static io.ballerina.lib.data.yaml.lexer.Token.TokenType.CHOMPING_INDICATOR;
@@ -333,7 +334,7 @@ public class LexerState {
             boolean startsWithWhiteSpace = false;
 
             if (WHITE_SPACE_PATTERN.pattern(lexerState.peek())) {
-                Scanner.iterate(lexerState, Scanner.WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
+                Scanner.iterate(lexerState, WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
                 startsWithWhiteSpace = true;
             }
 
@@ -630,7 +631,7 @@ public class LexerState {
 
             // Check for separation-in-space before the tag prefix
             if (WHITE_SPACE_PATTERN.pattern(lexerState.peek())) {
-                Scanner.iterate(lexerState, Scanner.WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
+                Scanner.iterate(lexerState, WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
                 return this;
             }
 
@@ -656,7 +657,7 @@ public class LexerState {
 
             // Check for tail separation-in-line
             if (WHITE_SPACE_PATTERN.pattern(lexerState.peek())) {
-                Scanner.iterate(lexerState, Scanner.WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
+                Scanner.iterate(lexerState, WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
                 return this;
             }
 
@@ -689,7 +690,7 @@ public class LexerState {
 
             // Check for tail separation-in-line
             if (WHITE_SPACE_PATTERN.pattern(lexerState.peek())) {
-                Scanner.iterate(lexerState, Scanner.WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
+                Scanner.iterate(lexerState, WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
                 return this;
             }
 
@@ -721,7 +722,7 @@ public class LexerState {
 
             // Check for tail separation-in-line
             if (WHITE_SPACE_PATTERN.pattern(lexerState.peek())) {
-                Scanner.iterate(lexerState, Scanner.WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
+                Scanner.iterate(lexerState, WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
                 return this;
             }
 
@@ -839,13 +840,15 @@ public class LexerState {
          */
         @Override
         public State transition(LexerState lexerState) throws Error.YamlParserException {
+            boolean hasWhiteSpace = false;
             if (lexerState.peek() == ' ') {
-                Scanner.iterate(lexerState, Scanner.WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
+                hasWhiteSpace = true;
+                Scanner.iterate(lexerState, WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
             }
 
             // Ignore any comments
-            if (lexerState.peek() == '#' && WHITE_SPACE_PATTERN.pattern(lexerState.peek())) {
-                lexerState.tokenize(EOL);
+            if (lexerState.peek() == '#' && hasWhiteSpace) {
+                Scanner.iterate(lexerState, COMMENT_SCANNER, EOL);
                 return this;
             }
 
@@ -853,19 +856,13 @@ public class LexerState {
             if (Utils.matchPattern(lexerState, List.of(DECIMAL_PATTERN), List.of(new Utils.CharPattern('0')))) {
                 lexerState.captureIndent = false;
                 int numericValue = Character.getNumericValue(lexerState.peek());
-                if (numericValue == -1 || numericValue == -2) {
-                    throw new Error.YamlParserException("invalid numeric value",
-                            lexerState.getLine(), lexerState.getColumn());
-                }
                 lexerState.addIndent += numericValue;
                 lexerState.forward();
                 return this.transition(lexerState);
             }
 
             // If the indentation indicator is at the tail
-            if (lexerState.getColumn() >= lexerState.getRemainingBufferedSize()) {
-                lexerState.forward();
-                lexerState.tokenize(EOL);
+            if (Scanner.scanAndTokenizeEOL(lexerState, EOL)) {
                 return this;
             }
 
@@ -894,7 +891,7 @@ public class LexerState {
 
             int limit = lexerState.indent + lexerState.addIndent;
             // Check if the line has sufficient indent to be process as a block scalar.
-            for (int i = 0; i < limit - 1; i++) {
+            for (int i = 0; i < limit; i++) {
                 if (lexerState.peek() != ' ') {
                     hasSufficientIndent = false;
                     break;
@@ -967,9 +964,7 @@ public class LexerState {
             }
 
             // Generate an empty lines that have less index.
-            if (lexerState.getColumn() >= lexerState.getRemainingBufferedSize()) {
-                lexerState.forward();
-                lexerState.tokenize(EMPTY_LINE);
+            if (Scanner.scanAndTokenizeEOL(lexerState, EMPTY_LINE)) {
                 return this;
             }
 
@@ -988,9 +983,7 @@ public class LexerState {
                 }
             }
 
-            if (lexerState.getColumn() >= lexerState.getRemainingBufferedSize()) {
-                lexerState.forward();
-                lexerState.tokenize(EMPTY_LINE);
+            if (Scanner.scanAndTokenizeEOL(lexerState, EMPTY_LINE)) {
                 return this;
             }
 
@@ -1023,7 +1016,7 @@ public class LexerState {
 
             // Check for separation-in-line
             if (WHITE_SPACE_PATTERN.pattern(lexerState.peek())) {
-                Scanner.iterate(lexerState, Scanner.WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
+                Scanner.iterate(lexerState, WHITE_SPACE_SCANNER, SEPARATION_IN_LINE);
                 return this;
             }
 

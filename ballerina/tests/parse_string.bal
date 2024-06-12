@@ -738,6 +738,14 @@ isolated function testTupleNestedMappingWithProjection1() returns error? {
 }
 
 @test:Config
+isolated function testBlockScalarValue() returns error? {
+    string content = check io:fileReadString(FILE_PATH + "nested_19.yaml");
+    string[] value = check parseString(content);
+    string[] expectedResult = ["\n", "\n", "block scalar\nvalue\n"];
+    test:assertEquals(value, expectedResult);
+}
+
+@test:Config
 isolated function testByteAsExpectedTypeForParseString() returns error? {
     byte result = check parseString("1");
     test:assertEquals(result, 1);
