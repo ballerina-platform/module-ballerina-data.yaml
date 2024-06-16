@@ -1222,14 +1222,14 @@ public class YamlParser {
 
                     // There cannot be nodes next to the document marker.
                     if (bufferedTokenType != EOL && bufferedTokenType != COMMENT && !explicit) {
-                        throw new Error.YamlParserException("'${state.tokenBuffer.token}' token cannot " +
-                                "start in the same line as the document marker", state.getLine(), state.getColumn());
+                        throw new Error.YamlParserException("token cannot start in the same line as " +
+                                "the document marker", state.getLine(), state.getColumn());
                     }
 
                     // Block collection nodes cannot be next to the directive marker.
                     if (explicit && (bufferedTokenType == PLANAR_CHAR && bufferedToken.getIndentation() != null
                             || bufferedTokenType == SEQUENCE_ENTRY)) {
-                        throw new Error.YamlParserException("'${state.tokenBuffer.token}' token cannot start " +
+                        throw new Error.YamlParserException("block collection token cannot start " +
                                 "in the same line as the directive marker", state.getLine(), state.getColumn());
                     }
                 }
@@ -1778,7 +1778,8 @@ public class YamlParser {
         return event;
     }
 
-    /** Extract the data for the given node.
+    /**
+     * Extract the data for the given node.
      *
      * @param state - Current parser state
      * @param peeked - If the expected token is already in the state

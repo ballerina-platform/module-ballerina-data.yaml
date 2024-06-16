@@ -67,7 +67,12 @@ function negativeDataProvider() returns [string, string][] => [
         "'invalid token 'DIRECTIVE_MARKER' inside the single-quoted scalar'" +
         " at line: '3' column: '3'"
     ],
-    ["negative_test_19.yaml", "'invalid block header' at line: '1' column: '10'"]
+    ["negative_test_19.yaml", "'invalid block header' at line: '1' column: '10'"],
+    ["negative_test_20.yaml", "'token cannot start in the same line as the document marker' at line: '2' column: '7'"],
+    [
+        "negative_test_21.yaml",
+        "'block collection token cannot start in the same line as the directive marker' at line: '2' column: '7'"
+    ]
 
 ];
 
@@ -91,7 +96,8 @@ function tagHandleNegativeDataProvider() returns [string, string][] => [
     ["tag_handle_negative_6.yaml", "'invalid digit character' at line: '1' column: '9'"],
     ["tag_handle_negative_7.yaml", "'invalid directive document' at line: '2' column: '1'"],
     ["tag_handle_negative_8.yaml", "'invalid document' at line: '1' column: '8'"],
-    ["tag_handle_negative_9.yaml", "'directives are not allowed in a bare document' at line: '3' column: '5'"]
+    ["tag_handle_negative_9.yaml", "'directives are not allowed in a bare document' at line: '3' column: '5'"],
+    ["tag_handle_negative_10.yaml", "'tag schema not supported' at line: '3' column: '7'"]
 ];
 
 @test:Config {

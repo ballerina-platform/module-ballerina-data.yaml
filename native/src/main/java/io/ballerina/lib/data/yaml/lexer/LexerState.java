@@ -457,6 +457,7 @@ public class LexerState {
                         }
                         default ->  { // Check for primary and name tag handles
                             lexerState.lexeme = "!";
+                            lexerState.forward();
                             Scanner.iterate(lexerState, Scanner.DIFF_TAG_HANDLE_SCANNER, TAG_HANDLE, true);
                             return this;
                         }

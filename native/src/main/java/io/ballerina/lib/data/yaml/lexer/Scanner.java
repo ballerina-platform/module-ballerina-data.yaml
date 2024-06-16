@@ -315,19 +315,20 @@ public class Scanner {
                     sm.setLexeme("!");
                     return true;
                 }
+
+                // Store the complete primary tag if a white space or a flow indicator is detected.
+                if (differentiate && matchPattern(sm, List.of(FLOW_INDICATOR_PATTERN, WHITE_SPACE_PATTERN), 1)) {
+                    sm.setLexemeBuffer(sm.getLexeme().substring(1));
+                    sm.setLexeme("!");
+                    return true;
+                }
+
                 return false;
             }
 
             // Scan the end delimiter of the tag.
             if (sm.peek() == '!') {
                 sm.appendToLexeme("!");
-                return true;
-            }
-
-            // Store the complete primary tag if a white space or a flow indicator is detected.
-            if (differentiate && matchPattern(sm, List.of(FLOW_INDICATOR_PATTERN, WHITE_SPACE_PATTERN), 0)) {
-                sm.setLexemeBuffer(sm.getLexeme().substring(1));
-                sm.setLexeme("!");
                 return true;
             }
 
