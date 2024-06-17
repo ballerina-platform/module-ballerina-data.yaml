@@ -81,7 +81,6 @@ public class Token {
         SINGLE_QUOTE_CHAR("<single-quoted-scalar>"),
         PLANAR_CHAR("<plain-scalar>"),
         PRINTABLE_CHAR("<printable-char>"),
-        INDENTATION_INDICATOR("<indentation-indicator>"),
         CHOMPING_INDICATOR("<chomping-indicator>"),
         EMPTY_LINE("<empty-line>"),
         EOL("<end-of-line>"),

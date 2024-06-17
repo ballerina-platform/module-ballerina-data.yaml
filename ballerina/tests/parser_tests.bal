@@ -40,7 +40,8 @@ function tagHandleData() returns [string, TestCase][] => [
     ["tag_handle_8.yaml", {case: "value"}],
     ["tag_handle_9.yaml", {case: "uri_scanner"}],
     ["tag_handle_10.yaml", {case: "value"}],
-    ["tag_handle_11.yaml", {case: "value"}]
+    ["tag_handle_11.yaml", {case: "value"}],
+    ["tag_handle_12.yaml", {case: "value"}]
 ];
 
 type TestCase record {|

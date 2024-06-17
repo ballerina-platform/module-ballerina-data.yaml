@@ -922,7 +922,7 @@ public class LexerState {
                         if (lexerState.trailingComment) {
                             lexerState.tokenize(EOL);
                         } else {
-                            lexerState.tokenize(TRAILING_COMMENT);
+                            Scanner.iterate(lexerState, COMMENT_SCANNER, TRAILING_COMMENT);
                         }
                         return this;
                     }

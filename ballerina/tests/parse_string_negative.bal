@@ -72,7 +72,13 @@ function negativeDataProvider() returns [string, string][] => [
     [
         "negative_test_21.yaml",
         "'block collection token cannot start in the same line as the directive marker' at line: '2' column: '7'"
-    ]
+    ],
+    ["negative_test_22.yaml", "'mapping keys cannot span multiple lines' at line: '2' column: '9'"],
+    ["negative_test_23.yaml", "'expected token differ from the actual token' at line: '1' column: '10'"],
+    ["negative_test_24.yaml", "'expected token differ from the actual token' at line: '1' column: '13'"],
+    ["negative_test_25.yaml", "'expected a key for the block mapping' at line: '3' column: '6'"],
+    ["negative_test_26.yaml", "'an alias node cannot have tag properties' at line: '2' column: '16'"],
+    ["negative_test_27.yaml", "'cannot have a block node inside a flow node' at line: '1' column: '7'"]
 
 ];
 

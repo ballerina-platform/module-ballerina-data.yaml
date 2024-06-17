@@ -759,6 +759,14 @@ isolated function testParsingEmptyLines() returns error? {
 }
 
 @test:Config
+isolated function testTrailingComments() returns error? {
+    string content = check io:fileReadString(FILE_PATH + "nested_21.yaml");
+    string[] value = check parseString(content);
+    string[] expectedResult = ["first", "second"];
+    test:assertEquals(value, expectedResult);
+}
+
+@test:Config
 isolated function testByteAsExpectedTypeForParseString() returns error? {
     byte result = check parseString("1");
     test:assertEquals(result, 1);
