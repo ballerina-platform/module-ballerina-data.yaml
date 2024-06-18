@@ -16,11 +16,8 @@
 
 import ballerina/data.yaml;
 
-type UnionType table<record {|int a;|}>|record {|string b;|};
-
-type IntersectionType UnionType & readonly;
-
-public function main() returns error? {
-    byte[] bytes = [];
-    IntersectionType _ = check yaml:parseBytes(bytes);
+function call(string data) returns error? {
+    string value = "value";
+    anydata _ = check yaml:parseString(value);
+    int _ = "3";
 }

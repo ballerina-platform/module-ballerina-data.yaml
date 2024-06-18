@@ -113,6 +113,7 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
                         processModuleVariableDeclarationNode((ModuleVariableDeclarationNode) member, ctx);
                 case TYPE_DEFINITION ->
                         processTypeDefinitionNode((TypeDefinitionNode) member, ctx);
+                default -> { }
             }
         }
     }
@@ -206,6 +207,8 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
         for (TypeSymbol memberType : tupleTypeSymbol.memberTypeDescriptors()) {
             validateExpectedType(memberType, ctx);
         }
+        Optional<TypeSymbol> restTypeSymbol = tupleTypeSymbol.restTypeDescriptor();
+        restTypeSymbol.ifPresent(typeSymbol -> validateExpectedType(typeSymbol, ctx));
     }
 
     private void validateRecordType(RecordTypeSymbol recordTypeSymbol, SyntaxNodeAnalysisContext ctx) {

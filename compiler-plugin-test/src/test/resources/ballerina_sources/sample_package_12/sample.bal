@@ -14,13 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import ballerina/lang.'int as i;
 import ballerina/data.yaml;
 
-type UnionType table<record {|int a;|}>|record {|string b;|};
-
-type IntersectionType UnionType & readonly;
-
-public function main() returns error? {
-    byte[] bytes = [];
-    IntersectionType _ = check yaml:parseBytes(bytes);
+function call(stream<byte[], error?> strm) returns error? {
+    string value = "value";
+    anydata _ = check yaml:parseStream(strm);
+    int _ = i:abs(12);
 }

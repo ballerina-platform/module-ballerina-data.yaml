@@ -16,11 +16,11 @@
 
 import ballerina/data.yaml;
 
-type UnionType table<record {|int a;|}>|record {|string b;|};
-
-type IntersectionType UnionType & readonly;
+type Tuple [xml, xml...];
+type Tuple2 [xml, xml];
 
 public function main() returns error? {
     byte[] bytes = [];
-    IntersectionType _ = check yaml:parseBytes(bytes);
+    Tuple _ = check yaml:parseBytes(bytes);
+    Tuple2 _ = check yaml:parseBytes(bytes);
 }

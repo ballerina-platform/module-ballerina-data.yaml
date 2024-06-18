@@ -16,6 +16,8 @@
 
 import ballerina/data.yaml;
 
+const VALUE = "1";
+
 public function main() returns error? {
     int|table<record {|string a;|}>|record {| int b;|} val = check yaml:parseString("1");
 }

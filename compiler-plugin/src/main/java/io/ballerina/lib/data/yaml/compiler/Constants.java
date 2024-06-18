@@ -25,11 +25,13 @@ package io.ballerina.lib.data.yaml.compiler;
  */
 public class Constants {
 
+    private Constants() {
+    }
+
     static final String BALLERINA = "ballerina";
     static final String PARSE_STRING = "parseString";
     static final String PARSE_BYTES = "parseBytes";
     static final String PARSE_STREAM = "parseStream";
-    static final String TO_YAML_STRING = "toYamlString";
     static final String NAME = "Name";
     static final String YAML = "yaml";
     static final String DATA_YAML = "data.yaml";

@@ -22,4 +22,8 @@ type Data record {
     }
     string A;
     string B;
+    @display {
+        label: "C"
+    }
+    string C;
 };
