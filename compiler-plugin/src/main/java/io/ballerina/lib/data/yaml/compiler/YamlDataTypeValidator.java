@@ -209,12 +209,18 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
     }
 
     private void validateRecordType(RecordTypeSymbol recordTypeSymbol, SyntaxNodeAnalysisContext ctx) {
-        detectDuplicateFields(recordTypeSymbol, ctx);
+        List<String> fieldMembers = new ArrayList<>();
 
         for (Map.Entry<String, RecordFieldSymbol> entry : recordTypeSymbol.fieldDescriptors().entrySet()) {
             RecordFieldSymbol fieldSymbol = entry.getValue();
             currentLocation = fieldSymbol.getLocation().orElseGet(() -> currentLocation);
             validateExpectedType(fieldSymbol.typeDescriptor(), ctx);
+            String name = getNameFromAnnotation(entry.getKey(), fieldSymbol.annotAttachments());
+            if (fieldMembers.contains(name)) {
+                reportDiagnosticInfo(ctx, fieldSymbol.getLocation(), YamlDataDiagnosticCodes.DUPLICATE_FIELD);
+                continue;
+            }
+            fieldMembers.add(name);
         }
     }
 
@@ -231,15 +237,7 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
             return getRawType(((IntersectionTypeSymbol) typeDescriptor).effectiveTypeDescriptor());
         }
         if (typeDescriptor.typeKind() == TypeDescKind.TYPE_REFERENCE) {
-            TypeReferenceTypeSymbol typeRef = (TypeReferenceTypeSymbol) typeDescriptor;
-            if (typeRef.typeDescriptor().typeKind() == TypeDescKind.INTERSECTION) {
-                return getRawType(((IntersectionTypeSymbol) typeRef.typeDescriptor()).effectiveTypeDescriptor());
-            }
-            TypeSymbol rawType = typeRef.typeDescriptor();
-            if (rawType.typeKind() == TypeDescKind.TYPE_REFERENCE) {
-                return getRawType(rawType);
-            }
-            return rawType;
+            return getRawType(((TypeReferenceTypeSymbol) typeDescriptor).typeDescriptor());
         }
         return typeDescriptor;
     }
@@ -249,7 +247,7 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
         Location pos = location.orElseGet(() -> currentLocation);
         DiagnosticInfo diagnosticInfo = new DiagnosticInfo(diagnosticsCodes.getCode(),
                 diagnosticsCodes.getMessage(), diagnosticsCodes.getSeverity());
-        if (allDiagnosticInfo.containsKey(pos) && allDiagnosticInfo.get(pos).equals(diagnosticInfo)) {
+        if (pos == null || allDiagnosticInfo.containsKey(pos) && allDiagnosticInfo.get(pos).equals(diagnosticInfo)) {
             return;
         }
         allDiagnosticInfo.put(pos, diagnosticInfo);
@@ -294,7 +292,7 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
             String name = getNameFromAnnotation(entry.getKey(), fieldSymbol.annotAttachments());
             if (fieldMembers.contains(name)) {
                 reportDiagnosticInfo(ctx, fieldSymbol.getLocation(), YamlDataDiagnosticCodes.DUPLICATE_FIELD);
-                return;
+                continue;
             }
             fieldMembers.add(name);
         }
@@ -324,7 +322,7 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
         return annotation.getModule().flatMap(Symbol::getName).orElse("");
     }
 
-    public static boolean isYamlImport(ModuleSymbol moduleSymbol) {
+    private static boolean isYamlImport(ModuleSymbol moduleSymbol) {
         return BALLERINA.equals(moduleSymbol.id().orgName())
                 && DATA_YAML.equals(moduleSymbol.id().moduleName());
     }
