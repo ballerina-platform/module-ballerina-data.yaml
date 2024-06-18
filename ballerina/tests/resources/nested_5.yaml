@@ -1,0 +1,12 @@
+title: "To Kill a Mockingbird"
+author:
+  name: "Harper Lee"
+  birthdate: "1926-04-28"
+  hometown: "Monroeville, Alabama"
+  local: false
+price: 10.5
+publisher:
+  name: "J. B. Lippincott & Co."
+  year: 1960
+  location: "Philadelphia"
+  month: "4"

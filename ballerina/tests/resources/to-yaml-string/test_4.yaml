@@ -1,0 +1,34 @@
+'library':
+  'name': 'Central Library'
+  'location':
+    'address': '123 Library St'
+    'city': 'Booktown'
+    'state': 'Knowledge'
+  'books':
+  -
+    'title': 'The Great Gatsby'
+    'author': 'F. Scott Fitzgerald'
+    'genres':
+    - 'Classic'
+    - 'Fiction'
+    'copiesAvailable': '3'
+  -
+    'title': '1984'
+    'author': 'George Orwell'
+    'genres':
+    - 'Dystopian'
+    - 'Science Fiction'
+    'copiesAvailable': '5'
+  'staff':
+  -
+    'name': 'Jane Doe'
+    'position': 'Librarian'
+    'contact':
+      'email': 'jane.doe@library.com'
+      'phone': '555-1234'
+  -
+    'name': 'John Smith'
+    'position': 'Assistant Librarian'
+    'contact':
+      'email': 'john.smith@library.com'
+      'phone': '555-5678'

@@ -1,0 +1,15 @@
+- STRING
+- INT
+- FLOAT
+- BOOLEAN
+- DECIMAL
+- NIL
+---
+- YAML
+- TOML
+- CSV
+- JSON
+- XML
+---
+-
+  format: EDI

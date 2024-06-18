@@ -1,0 +1,5 @@
+movies:
+  - title: Inception
+  director: Christopher Nolan
+  genre: Sci-Fi
+  year: 2010

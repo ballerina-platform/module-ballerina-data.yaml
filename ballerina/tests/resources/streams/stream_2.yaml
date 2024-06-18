@@ -1,0 +1,86 @@
+0
+---
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  labels:
+    app: "ballerina_mongodb_kubernetes"
+  name: "ballerina-mongo"
+spec:
+  ports:
+  - name: "port-1-ballerin"
+    port: 3005
+    protocol: "TCP"
+    targetPort: 3005
+    nodePort: 31781
+  selector:
+    app: "ballerina_mongodb_kubernetes"
+  type: "NodePort"
+---
+Sample String
+---
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  name: "ballerina-mongodb-configmap"
+data:
+  Config.toml: "[ballerina.ballerina_mongodb_kubernetes]\nmongodbPort = 27017\n\
+    mongodbHost = \"mongodb-service\"\ndbName = \"students\"\n\n[ballerina.log]\n\
+    level = \"DEBUG\"\n"
+---
+true
+---
+apiVersion: "v1"
+kind: "Secret"
+metadata:
+  name: "ballerina-mongodb-secret"
+data:
+  Secret.toml: "W2xha3NoYW53ZWVyYXNpbmdoZS5iYWxsZXJpbmF"
+---
+12.2312
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  labels:
+    app: "ballerina_mongodb_kubernetes"
+  name: "ballerina-mongo-deployment"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "ballerina_mongodb_kubernetes"
+  template:
+    metadata:
+      labels:
+        app: "ballerina_mongodb_kubernetes"
+    spec:
+      containers:
+      - env:
+        - name: "BAL_CONFIG_FILES"
+          value: "/home/ballerina/conf/Config.toml:/home/ballerina/secrets/Secret.toml:"
+        image: "lw/students:v1.0.0"
+        imagePullPolicy: Never
+        name: "ballerina-mongo-deployment"
+        ports:
+        - containerPort: 3005
+          name: "port-1-ballerin"
+          protocol: "TCP"
+        volumeMounts:
+        - mountPath: "/home/ballerina/secrets/"
+          name: "ballerina-mongodb-secret-volume"
+          readOnly: true
+        - mountPath: "/home/ballerina/conf/"
+          name: "ballerina-mongodb-configmap-volume"
+          readOnly: false
+      volumes:
+      - name: "ballerina-mongodb-secret-volume"
+        secret:
+          secretName: "ballerina-mongodb-secret"
+      - configMap:
+          name: "ballerina-mongodb-configmap"
+        name: "ballerina-mongodb-configmap-volume"
+---
+1
+---
+2

@@ -1,0 +1,17 @@
+- title: "Book 1"
+  pages: 200
+  authors:
+    - Author A
+    - Author B
+  price: 15.99
+- title: "Book 2"
+  pages: 300
+  authors:
+    - Author X
+    - Author Y
+  price: 20.99
+- title: "Book 3"
+  pages: 150
+  authors:
+    - Author M
+  price: 12.50

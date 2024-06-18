@@ -1,0 +1,23 @@
+# Define a product with nested data
+product:
+  name: T-Shirt
+  brand: "Acme Clothing"
+
+# Create variations with aliases
+variation_1: &variation_1
+  # Add specific details
+  size: S
+  color: red
+
+variation_2: &variation_2
+  size: M
+  color: blue
+
+# Define a shopping cart with product references
+shopping_cart:
+  items:
+    - *variation_1
+    - *variation_2
+  # Additional information about the cart
+  total_price: 29.99
+  currency: USD

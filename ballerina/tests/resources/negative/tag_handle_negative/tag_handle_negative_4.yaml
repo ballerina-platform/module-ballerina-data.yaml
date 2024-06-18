@@ -1,0 +1,4 @@
+%TAG !yaml! tag:yaml.org,2002:
+%TAG !yaml! tag:yaml.org,2002:
+---
+name:  !yaml!str user

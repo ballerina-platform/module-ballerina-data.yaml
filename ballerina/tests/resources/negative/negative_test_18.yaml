@@ -1,0 +1,4 @@
+invalid-block-scalar:
+  'invalid single quoted
+---
+  bloack scalar'

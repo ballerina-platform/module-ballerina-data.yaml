@@ -1,0 +1,14 @@
+FoldingDoubleQuote:
+  "Empty line
+  
+  as a line feed"
+FoldingSingleQuote:
+  'Empty line
+  
+  ''as a line ''feed'
+FoldingSingleQuote2:
+  'Empty line
+  
+  '''
+Chomping: |
+  Clipped empty lines
