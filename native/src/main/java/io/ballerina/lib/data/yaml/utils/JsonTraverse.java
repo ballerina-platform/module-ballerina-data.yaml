@@ -127,9 +127,13 @@ public class JsonTraverse {
                    return Values.fromStringWithType(Values.convertValueToBString(json), referredType, schema);
                 }
                 case TypeTags.UNION_TAG -> {
+                    Object result;
                     for (Type memberType : ((UnionType) referredType).getMemberTypes()) {
                         try {
-                            return traverseJson(json, memberType);
+                            result = traverseJson(json, memberType);
+                            if (!(result instanceof BError)) {
+                                return result;
+                            }
                         } catch (Exception e) {
                             // Ignore
                         }

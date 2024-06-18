@@ -203,6 +203,17 @@ isolated function testYamlStreamPastingWithTupleExpected6() returns error? {
     test:assertEquals(result, expectedResult);
 }
 
+@test:Config
+isolated function testParsingStreamOfBasicValues() returns error? {
+    string filePaht = YAML_STREAM_TEST_PATH + "stream_4.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    [int, float, string, (), boolean, float] result = check parseStream(streamResult);
+    [int, float, string, (), boolean, float] expectedResult = [
+        234, 12.34, "string", (), true, 12.11
+    ];
+    test:assertEquals(result, expectedResult);
+}
+
 type T1 record {|
     string p1;
 |};

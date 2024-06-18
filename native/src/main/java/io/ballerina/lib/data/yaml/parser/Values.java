@@ -435,7 +435,9 @@ public class Values {
     }
 
     public static BString convertValueToBString(Object value) {
-        if (value instanceof BString) {
+        if (value == null) {
+            return StringUtils.fromString("null");
+        } else if (value instanceof BString) {
             return (BString) value;
         } else if (value instanceof Long || value instanceof String || value instanceof Integer
                 || value instanceof BDecimal || value instanceof Double || value instanceof Boolean) {
@@ -544,7 +546,7 @@ public class Values {
         return StringUtils.fromString(value);
     }
 
-    private static BError returnError(String string, String expType) {
+    private static Exception returnError(String string, String expType) {
         return DiagnosticLog.error(DiagnosticErrorCode.CANNOT_CONVERT_TO_EXPECTED_TYPE,
                 PredefinedTypes.TYPE_STRING.getName(), string, expType);
     }

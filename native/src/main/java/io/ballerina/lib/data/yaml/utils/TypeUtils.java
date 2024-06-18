@@ -2,7 +2,6 @@ package io.ballerina.lib.data.yaml.utils;
 
 import io.ballerina.runtime.api.PredefinedTypes;
 import io.ballerina.runtime.api.types.Type;
-import io.ballerina.runtime.api.values.BObject;
 import io.ballerina.runtime.api.values.BString;
 import io.ballerina.runtime.api.values.BValue;
 
@@ -23,10 +22,6 @@ public class TypeUtils {
                 if (value instanceof Double) {
                     return PredefinedTypes.TYPE_FLOAT;
                 }
-
-                if (value instanceof Integer || value instanceof Byte) {
-                    return PredefinedTypes.TYPE_BYTE;
-                }
             } else {
                 if (value instanceof BString) {
                     return PredefinedTypes.TYPE_STRING;
@@ -34,10 +29,6 @@ public class TypeUtils {
 
                 if (value instanceof Boolean) {
                     return PredefinedTypes.TYPE_BOOLEAN;
-                }
-
-                if (value instanceof BObject) {
-                    return ((BObject) value).getOriginalType();
                 }
             }
 
