@@ -150,10 +150,6 @@ public class JsonTraverse {
                     return traverseMapJsonOrArrayJson(json, ValueCreator.createMapValue(mapType), referredType);
                 }
                 case TypeTags.INTERSECTION_TAG -> {
-                    Type effectiveType = ((IntersectionType) referredType).getEffectiveType();
-                    if (!SymbolFlags.isFlagOn(SymbolFlags.READONLY, effectiveType.getFlags())) {
-                        throw DiagnosticLog.error(DiagnosticErrorCode.UNSUPPORTED_TYPE, type);
-                    }
                     for (Type constituentType : ((IntersectionType) referredType).getConstituentTypes()) {
                         if (constituentType.getTag() == TypeTags.READONLY_TAG) {
                             continue;
@@ -216,7 +212,6 @@ public class JsonTraverse {
                     case TypeTags.NULL_TAG, TypeTags.BOOLEAN_TAG, TypeTags.INT_TAG, TypeTags.FLOAT_TAG,
                             TypeTags.DECIMAL_TAG, TypeTags.STRING_TAG -> {
                         BString bStringVal = StringUtils.fromString(mapValue.toString());
-//                        Object value = convertToBasicType(mapValue, currentFieldType);
                         Object value = Values.fromStringWithType(bStringVal, currentFieldType, schema);
                         ((BMap<BString, Object>) currentJsonNode).put(StringUtils.fromString(fieldNames.pop()), value);
                     }

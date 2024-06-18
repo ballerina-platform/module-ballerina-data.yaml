@@ -61,7 +61,6 @@ public class TagResolutionUtils {
 
     public static Object constructBool(String value, YamlParser.ComposerState state)
             throws Error.YamlParserException {
-
         if (isCoreSchemaTrue(value)) {
             return true;
         } else if (isCoreSchemaFalse(value)) {
@@ -112,16 +111,15 @@ public class TagResolutionUtils {
         if (value.length() > 1) {
             if (value.startsWith(".")) {
                 String valueSuffix = value.substring(1);
-                if (valueSuffix.equals("nan") || valueSuffix.equals("NaN") || valueSuffix.equals("NAN")) {
+                if (isCoreSchemaNaN(valueSuffix)) {
                     return Double.NaN;
                 }
-                if (valueSuffix.equals("inf") || valueSuffix.equals("Inf") || valueSuffix.equals("INF")) {
+                if (isCoreSchemaInf(valueSuffix)) {
                     return Double.POSITIVE_INFINITY;
                 }
             } else if (value.startsWith("+.") || value.startsWith("-.")) {
                 String valueSuffix = value.substring(2);
-                boolean isInfinity = valueSuffix.equals("inf") ||
-                        valueSuffix.equals("Inf") || valueSuffix.equals("INF");
+                boolean isInfinity = isCoreSchemaInf(valueSuffix);
                 if (isInfinity) {
                     return value.startsWith("+") ? Double.POSITIVE_INFINITY : Double.NEGATIVE_INFINITY;
                 }
@@ -133,6 +131,14 @@ public class TagResolutionUtils {
             return Double.parseDouble(value);
         }
         throw new Error.YamlParserException("cannot cast " + value + " to float", state.getLine(), state.getColumn());
+    }
+
+    private static boolean isCoreSchemaInf(String valueSuffix) {
+        return valueSuffix.equals("inf") || valueSuffix.equals("Inf") || valueSuffix.equals("INF");
+    }
+
+    private static boolean isCoreSchemaNaN(String valueSuffix) {
+        return valueSuffix.equals("nan") || valueSuffix.equals("NaN") || valueSuffix.equals("NAN");
     }
 
     public static boolean isCoreSchemaNull(String value) {

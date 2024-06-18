@@ -19,8 +19,6 @@
 package io.ballerina.lib.data.yaml.parser;
 
 import io.ballerina.lib.data.yaml.common.YamlEvent;
-import io.ballerina.lib.data.yaml.utils.DiagnosticErrorCode;
-import io.ballerina.lib.data.yaml.utils.DiagnosticLog;
 import io.ballerina.runtime.api.types.Field;
 import io.ballerina.runtime.api.types.RecordType;
 import io.ballerina.runtime.api.utils.StringUtils;
@@ -63,9 +61,6 @@ public class ParserUtils {
         Map<String, Field> recordFields = recordType.getFields();
         for (String key : recordFields.keySet()) {
             String fieldName = modifiedNames.getOrDefault(key, key);
-            if (fields.containsKey(fieldName)) {
-                throw DiagnosticLog.error(DiagnosticErrorCode.DUPLICATE_FIELD, fieldName);
-            }
             fields.put(fieldName, recordFields.get(key));
         }
         return fields;
@@ -74,7 +69,7 @@ public class ParserUtils {
     public static String getModifiedName(Map<BString, Object> fieldAnnotation, String fieldName) {
         for (BString key : fieldAnnotation.keySet()) {
             if (key.getValue().endsWith(NAME)) {
-                return ((Map<BString, Object>) fieldAnnotation.get(key)).get(VALUE).toString();
+                return ((Map<?, ?>) fieldAnnotation.get(key)).get(VALUE).toString();
             }
         }
         return fieldName;

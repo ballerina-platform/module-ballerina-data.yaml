@@ -191,3 +191,15 @@ isolated function testUnionTypeAsExpectedTypeForParseString6() returns error? {
     test:assertEquals(val.m.field2, {a: "3", b: 4});
     test:assertEquals(val.n, [1.0, 2.0]);
 }
+
+type UnionWithIntersection string|int|int[] & readonly;
+
+@test:Config {
+    groups: ["Union"]
+}
+isolated function testUnionWithIntersection() returns error? {
+    string jsonStr = string `[1, 2, 3]`;
+    UnionWithIntersection val = check parseString(jsonStr);
+    test:assertTrue(val is readonly & int[]);
+    test:assertEquals(val, [1, 2, 3]);
+}

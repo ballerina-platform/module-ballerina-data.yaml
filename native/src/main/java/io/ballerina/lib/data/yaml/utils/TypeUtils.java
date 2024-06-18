@@ -19,9 +19,7 @@ public class TypeUtils {
                     return PredefinedTypes.TYPE_INT;
                 }
 
-                if (value instanceof Double) {
-                    return PredefinedTypes.TYPE_FLOAT;
-                }
+                return PredefinedTypes.TYPE_FLOAT;
             } else {
                 if (value instanceof BString) {
                     return PredefinedTypes.TYPE_STRING;

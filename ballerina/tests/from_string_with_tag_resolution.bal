@@ -108,7 +108,15 @@ isolated function testTagResolutionSimple(string yaml, anydata value, Options op
 
 function simpleTagResolutionDataProvider() returns [string, anydata, Options][] => [
     ["&anchor !!bool true", true, {}],
+    ["!!bool True", true, {}],
+    ["!!bool TRUE", true, {}],
+    ["!!bool false", false, {}],
+    ["!!bool False", false, {}],
+    ["!!bool FALSE", false, {}],
     ["!!null null", (), {}],
+    ["!!null Null", (), {}],
+    ["!!null NULL", (), {}],
+    ["!!null ~", (), {}],
     ["!!int 12", 12, {}],
     ["!!float .nan", float:NaN, {}],
     ["!!float .NaN", float:NaN, {}],
