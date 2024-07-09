@@ -20,6 +20,11 @@ const NEW_LINE_CHARACTER = "\n";
 
 # Converts YAML string to subtype of anydata.
 #
+# ```ballerina
+# json value = yaml:parseString("name: Ballerina");
+# value ⇒ {"name": "Ballerina"}
+# ```
+# 
 # + s - Source string value
 # + options - Options to be used for filtering in the projection
 # + t - Target type
@@ -30,6 +35,12 @@ public isolated function parseString(string s,
 
 # Converts YAML byte[] to subtype of anydata.
 #
+# ```ballerina
+# byte[] content = "name: Ballerina".toBytes();
+# json value = yaml:parseBytes(content);
+# value ⇒ {"name": "Ballerina"}
+# ```
+# 
 # + s - Source byte[] value
 # + options - Options to be used for filtering in the projection
 # + t - Target type
@@ -40,6 +51,12 @@ public isolated function parseBytes(byte[] s,
 
 # Converts YAML byte-block-stream to subtype of anydata.
 #
+# ```ballerina
+# stream<byte[], error?> content = getStream();
+# json value = yaml:parseStream(content);
+# value ⇒ {"name": "Ballerina"}
+# ```
+# 
 # + s - Source byte-block-stream value
 # + options - Options to be used for filtering in the projection
 # + t - Target type
@@ -50,6 +67,10 @@ public isolated function parseStream(stream<byte[], error?> s,
 
 # Converts anydata YAML value to a string.
 #
+# ```ballerina
+# yaml:toYamlString({"name": "Ballerina"}) ⇒ "name: Ballerina"
+# ```
+# 
 # + yamlValue - Input yaml value
 # + config - Options used to get desired toString representation
 # + return - On success, returns to string value, else returns an `yaml:Error`
