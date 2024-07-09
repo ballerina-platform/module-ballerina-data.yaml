@@ -16,6 +16,8 @@
 
 import ballerina/jballerina.java;
 
+const NEW_LINE_CHARACTER = "\n";
+
 # Converts YAML string to subtype of anydata.
 #
 # + s - Source string value
@@ -53,7 +55,7 @@ public isolated function parseStream(stream<byte[], error?> s,
 # + return - On success, returns to string value, else returns an `yaml:Error`
 public isolated function toYamlString(anydata yamlValue, WriteConfig config = {}) returns string|Error {
     string[] lines = check toYamlStringArray(yamlValue, config);
-    return "\n".'join(...lines);
+    return NEW_LINE_CHARACTER.'join(...lines);
 }
 
 isolated function toYamlStringArray(anydata yamlValue, WriteConfig config = {})

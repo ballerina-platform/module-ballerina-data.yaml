@@ -1806,9 +1806,6 @@ public class YamlParser {
                 checkEmptyKey(state);
                 return new YamlEvent.ScalarEvent(value);
             }
-            case SEQUENCE_START -> {
-                return new YamlEvent.StartEvent(SEQUENCE);
-            }
             case SEQUENCE_ENTRY -> {
                 if (state.isTagPropertiesInLine()) {
                     throw new Error.YamlParserException("'-' cannot be defined after tag properties",
@@ -1831,9 +1828,6 @@ public class YamlParser {
                     }
                 }
             }
-            case MAPPING_START -> {
-                return new YamlEvent.StartEvent(Collection.MAPPING);
-            }
             case LITERAL, FOLDED -> {
                 if (state.getLexerState().isFlowCollection()) {
                     throw new Error.YamlParserException("cannot have a block node inside a flow node",
@@ -1845,27 +1839,6 @@ public class YamlParser {
             }
             case ALIAS -> {
                 return new YamlEvent.AliasEvent(state.getCurrentToken().getValue());
-            }
-            case ANCHOR, TAG, TAG_HANDLE -> {
-                YamlEvent event = nodeComplete(state, EXPECT_MAP_KEY, tagStructure);
-                if (explicitKey) {
-                    return event;
-                }
-                if (event.getKind() == YamlEvent.EventKind.START_EVENT &&
-                        ((YamlEvent.StartEvent) event).getStartType() == Collection.MAPPING) {
-                    return new YamlEvent.StartEvent(Collection.MAPPING);
-                }
-                if (event.getKind() == YamlEvent.EventKind.END_EVENT) {
-                    state.getEventBuffer().add(0, event);
-                    return new YamlEvent.ScalarEvent();
-                }
-            }
-            case MAPPING_END -> {
-                if (explicitKey) {
-                    state.getEventBuffer().add(new YamlEvent.ScalarEvent());
-                }
-                state.getEventBuffer().add(new YamlEvent.EndEvent(Collection.MAPPING));
-                return new YamlEvent.ScalarEvent();
             }
         }
 
@@ -1936,18 +1909,6 @@ public class YamlParser {
                         break;
                     }
                     state.initLexer();
-                }
-                case EMPTY_LINE -> {
-                    if (!isFirstLine) {
-                        newLineBuffer.append("\n");
-                    }
-                    if (state.getLexerState().isEndOfStream()) {
-                        terminated = true;
-                        break;
-                    }
-                    state.initLexer();
-                    onlyEmptyLine = isFirstLine;
-                    isFirstLine = false;
                 }
                 case TRAILING_COMMENT -> {
                     state.getLexerState().setTrailingComment(true);
@@ -2141,20 +2102,6 @@ public class YamlParser {
 
                     if (emptyLine) {
                         emptyLine = false;
-                    }
-                }
-                case EOL -> { // Processing new lines
-                    if (!escaped) { // If not escaped, trim the trailing white spaces
-                        lexemeBuffer = trimTailWhitespace(lexemeBuffer, state.getLexerState().getLastEscapedChar());
-                    }
-
-                    state.getLexerState().setFirstLine(false);
-                    state.initLexer();
-
-                    // Add a whitespace if the delimiter is on a new line
-                    getNextToken(state, true);
-                    if (state.getBufferedToken().getType() == DOUBLE_QUOTE_DELIMITER && !emptyLine) {
-                        lexemeBuffer += " ";
                     }
                 }
                 case EMPTY_LINE -> {

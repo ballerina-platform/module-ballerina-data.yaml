@@ -1,4 +1,4 @@
-# Ballerina JSON Data Library
+# Ballerina YAML Data Library
 
 [![Build](https://github.com/ballerina-platform/module-ballerina-data.yaml/actions/workflows/build-timestamped-master.yml/badge.svg)](https://github.com/ballerina-platform/module-ballerina-data.yaml/actions/workflows/build-timestamped-master.yml)
 [![codecov](https://codecov.io/gh/ballerina-platform/module-ballerina-data.yaml/branch/main/graph/badge.svg)](https://codecov.io/gh/ballerina-platform/module-ballerina-data.yaml)
@@ -37,15 +37,15 @@ YAML value from an external source into a record value.
 import ballerina/data.yaml;
 import ballerina/io;
 
-type Book record {
+type Book record {|
     string name;
     string author;
     int year;
-};
+|};
 
 public function main() returns error? {
-    string jsonContent = check io:fileReadString("path/to/file.yaml");
-    Book book = check yaml:parseString(jsonContent);
+    string yamlContent = check io:fileReadString("path/to/file.yaml");
+    Book book = check yaml:parseString(yamlContent);
     io:println(book);
 }
 ```
@@ -64,11 +64,11 @@ import ballerina/io;
 
 public function main() returns error? {
     json content = {
-        "name": "Clean Code",
-        "author": "Robert C. Martin",
-        "year": 2008
+        name: "Clean Code",
+        author: "Robert C. Martin",
+        year: 2008
     };
-    string yamlString = check yaml:yaml:toYamlString(content);
+    string yamlString = check yaml:toYamlString(content);
     io:println(yamlString);
 }
 ```

@@ -192,7 +192,7 @@ isolated function testUnionTypeAsExpectedTypeForParseString6() returns error? {
     test:assertEquals(val.n, [1.0, 2.0]);
 }
 
-type UnionWithIntersection string|int|int[] & readonly;
+type UnionWithIntersection string|int|readonly & int[];
 
 @test:Config {
     groups: ["Union"]

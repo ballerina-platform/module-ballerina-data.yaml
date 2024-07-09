@@ -347,6 +347,7 @@ public class Values {
         if (expectedType == null) {
             return null;
         }
+        expectedType = TypeUtils.getReferredType(expectedType);
 
         if (expectedType.getTag() == TypeTags.ARRAY_TAG) {
             ArrayType arrayType = (ArrayType) expectedType;

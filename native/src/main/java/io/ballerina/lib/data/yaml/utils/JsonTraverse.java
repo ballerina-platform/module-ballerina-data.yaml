@@ -94,7 +94,7 @@ public class JsonTraverse {
             restType.clear();
             fieldNames.clear();
             rootArray = null;
-            allowDataProjection = false;
+            allowDataProjection = true;
             nilAsOptionalField = false;
             absentAsNilableType = false;
         }

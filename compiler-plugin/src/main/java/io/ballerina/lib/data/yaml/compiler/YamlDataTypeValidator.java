@@ -263,12 +263,8 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
         if (initializer.isEmpty() || !isParseFunctionOfStringSource(initializer.get())) {
             return;
         }
-
-        Optional<Symbol> symbol = semanticModel.symbol(moduleVariableDeclarationNode.typedBindingPattern());
-        if (symbol.isEmpty()) {
-            return;
-        }
-        validateExpectedType(((VariableSymbol) symbol.get()).typeDescriptor(), ctx);
+        semanticModel.symbol(moduleVariableDeclarationNode.typedBindingPattern())
+                .ifPresent(symbol -> validateExpectedType(((VariableSymbol) symbol).typeDescriptor(), ctx));
     }
 
     private void processTypeDefinitionNode(TypeDefinitionNode typeDefinitionNode, SyntaxNodeAnalysisContext ctx) {
@@ -280,12 +276,10 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
     }
 
     private void validateRecordTypeDefinition(TypeDefinitionNode typeDefinitionNode, SyntaxNodeAnalysisContext ctx) {
-        Optional<Symbol> symbol = semanticModel.symbol(typeDefinitionNode);
-        if (symbol.isEmpty()) {
-            return;
-        }
-        TypeDefinitionSymbol typeDefinitionSymbol = (TypeDefinitionSymbol) symbol.get();
-        detectDuplicateFields((RecordTypeSymbol) typeDefinitionSymbol.typeDescriptor(), ctx);
+        semanticModel.symbol(typeDefinitionNode)
+                .map(symbol -> (TypeDefinitionSymbol) symbol)
+                .ifPresent(typeDefinitionSymbol ->
+                        detectDuplicateFields((RecordTypeSymbol) typeDefinitionSymbol.typeDescriptor(), ctx));
     }
 
     private void detectDuplicateFields(RecordTypeSymbol recordTypeSymbol, SyntaxNodeAnalysisContext ctx) {
