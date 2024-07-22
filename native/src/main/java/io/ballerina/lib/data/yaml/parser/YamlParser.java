@@ -26,6 +26,7 @@ import io.ballerina.lib.data.yaml.lexer.LexerState;
 import io.ballerina.lib.data.yaml.lexer.Token;
 import io.ballerina.lib.data.yaml.lexer.YamlLexer;
 import io.ballerina.lib.data.yaml.utils.Constants;
+import io.ballerina.lib.data.yaml.utils.DataUtils;
 import io.ballerina.lib.data.yaml.utils.DiagnosticErrorCode;
 import io.ballerina.lib.data.yaml.utils.DiagnosticLog;
 import io.ballerina.lib.data.yaml.utils.Error;
@@ -51,6 +52,7 @@ import io.ballerina.runtime.api.values.BArray;
 import io.ballerina.runtime.api.values.BError;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
+import io.ballerina.runtime.api.values.BTypedesc;
 import org.ballerinalang.langlib.value.CloneReadOnly;
 
 import java.io.Reader;
@@ -95,6 +97,7 @@ import static io.ballerina.lib.data.yaml.parser.ParserUtils.ParserOption.EXPECT_
 import static io.ballerina.lib.data.yaml.parser.ParserUtils.getAllFieldsInRecord;
 import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_GLOBAL_TAG_HANDLE;
 import static io.ballerina.lib.data.yaml.utils.Constants.DEFAULT_TAG_HANDLES;
+import static io.ballerina.lib.data.yaml.utils.Constants.ENABLE_CONSTRAINT_VALIDATION;
 
 /**
  * Core parsing of YAML strings.
@@ -442,16 +445,22 @@ public class YamlParser {
      *
      * @param reader reader which contains the YAML content
      * @param options represent the options that can be used to modify the behaviour of conversion
-     * @param expectedType Shape of the YAML content required
+     * @param typed Shape of the YAML content required
      * @return subtype of anydata value
      * @throws BError for any parsing error
      */
-    public static Object compose(Reader reader, BMap<BString, Object> options, Type expectedType) throws BError {
+    public static Object compose(Reader reader, BMap<BString, Object> options, BTypedesc typed) throws BError {
         OptionsUtils.ReadConfig readConfig = OptionsUtils.resolveReadConfig(options);
         ComposerState composerState = new ComposerState(new ParserState(reader), readConfig);
-        composerState.handleExpectedType(expectedType);
+        composerState.handleExpectedType(typed.getDescribingType());
         try {
-            return composerState.isPossibleStream ? composeStream(composerState) : composeDocument(composerState);
+            Object result = composerState.isPossibleStream ?
+                    composeStream(composerState) : composeDocument(composerState);
+            if (result instanceof BError) {
+                return result;
+            }
+            return DataUtils.validateConstraints(result, typed,
+                    (Boolean) options.get(ENABLE_CONSTRAINT_VALIDATION));
         } catch (Error.YamlParserException e) {
              return DiagnosticLog.error(DiagnosticErrorCode.YAML_PARSER_EXCEPTION,
                      e.getMessage(), e.getLine(), e.getColumn());

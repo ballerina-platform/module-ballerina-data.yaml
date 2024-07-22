@@ -52,7 +52,7 @@ public class Native {
 
     public static Object parseString(BString yaml, BMap<BString, Object> options, BTypedesc typed) {
         try {
-            return YamlParser.compose(new StringReader(yaml.getValue()), options, typed.getDescribingType());
+            return YamlParser.compose(new StringReader(yaml.getValue()), options, typed);
         } catch (BError e) {
             return e;
         }
@@ -61,7 +61,7 @@ public class Native {
     public static Object parseBytes(BArray yaml, BMap<BString, Object> options, BTypedesc typed) {
         try {
             return YamlParser.compose(new InputStreamReader(new ByteArrayInputStream(yaml.getBytes())),
-                    options, typed.getDescribingType());
+                    options, typed);
         } catch (BError e) {
             return e;
         }

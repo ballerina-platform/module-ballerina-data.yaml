@@ -83,7 +83,7 @@ public class DataReaderTask implements Runnable {
         try (var byteBlockSteam = new BallerinaByteBlockInputStream(env, iteratorObj, resolveNextMethod(iteratorObj),
                 resolveCloseMethod(iteratorObj), resultConsumer)) {
             Object result = YamlParser.compose(new InputStreamReader(byteBlockSteam),
-                    options, typed.getDescribingType());
+                    options, typed);
             future.complete(result);
         } catch (Exception e) {
             future.complete(DiagnosticLog.getYamlError("Error occurred while reading the stream: " + e.getMessage()));

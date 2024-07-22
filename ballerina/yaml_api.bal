@@ -99,6 +99,7 @@ public enum YAMLSchema {
 # + allowAnchorRedefinition - field description  
 # + allowMapEntryRedefinition - field description
 # + allowDataProjection - Enable or disable projection
+# + enableConstraintValidation - Enable or disable constraint validation
 public type Options record {|
     YAMLSchema schema = CORE_SCHEMA;
     boolean allowAnchorRedefinition = true;
@@ -111,6 +112,7 @@ public type Options record {|
         # If `true`, top level tuple ordering considered strictly.
         boolean strictTupleOrder = false;
     }|false allowDataProjection = {};
+    boolean enableConstraintValidation = true;
 |};
 
 # Configurations for writing a YAML document.
