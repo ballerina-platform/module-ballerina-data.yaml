@@ -227,8 +227,7 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
         }
     }
 
-    private void validateUnionType(UnionTypeSymbol unionTypeSymbol,
-                                   SyntaxNodeAnalysisContext ctx) {
+    private void validateUnionType(UnionTypeSymbol unionTypeSymbol, SyntaxNodeAnalysisContext ctx) {
         List<TypeSymbol> memberTypeSymbols = unionTypeSymbol.memberTypeDescriptors();
         for (TypeSymbol memberTypeSymbol : memberTypeSymbols) {
             validateExpectedType(getRawType(memberTypeSymbol), ctx);

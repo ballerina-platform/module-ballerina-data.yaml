@@ -175,3 +175,27 @@ function invalidConstraintAnnotation() returns [string, typedesc<record {}>, str
         ]
     ];
 }
+
+@test:Config {
+    groups: ["constraint-validation"]
+}
+function testConstrainValidationDisableOption() returns error? {
+    string jsonStr = string `{
+                               "name": "John Doe",
+                               "age": 3,
+                               "height": 180.20,
+                               "dob": {
+                                   "year": 1990,
+                                   "month": 12,
+                                   "day": 31
+                               }
+                           }`;
+
+    ValidationPerson person = check parseString(jsonStr, {enableConstraintValidation: false});
+    test:assertEquals(person.name, "John Doe");
+    test:assertEquals(person.age, 3);
+    test:assertEquals(person.height, 180.20);
+    test:assertEquals(person.dob.year, 1990);
+    test:assertEquals(person.dob.month, 12);
+    test:assertEquals(person.dob.day, 31);
+}
