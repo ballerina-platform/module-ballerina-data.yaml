@@ -18,6 +18,7 @@
 
 package io.ballerina.lib.data.yaml.utils;
 
+import io.ballerina.lib.data.yaml.ModuleUtils;
 import io.ballerina.runtime.api.creators.ErrorCreator;
 import io.ballerina.runtime.api.utils.StringUtils;
 import io.ballerina.runtime.api.values.BError;
