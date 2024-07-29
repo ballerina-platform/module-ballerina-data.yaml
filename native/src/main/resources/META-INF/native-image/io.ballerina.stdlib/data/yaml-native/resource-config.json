@@ -1,6 +1,6 @@
 {
   "bundles":[{
-    "name":"error",
+    "name":"yaml_error",
     "locales":[""]
   }]
 }
