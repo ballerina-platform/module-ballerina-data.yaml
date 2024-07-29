@@ -522,7 +522,7 @@ public class YamlParser {
         }
 
         private void updateTupleMemberIndexTableAndAddToTuple(Object value, BArray tupleValue) {
-            Type type = io.ballerina.lib.data.yaml.utils.TypeUtils.getType(value);
+            Type type = TypeUtils.getType(value);
             int typeHashOfBValue = type.hashCode();
             for (int i = 0; i < indexToTupleMemberMapping.size(); i++) {
                 Map<Integer, Integer> typeMapping = indexToTupleMemberMapping.get(i);
