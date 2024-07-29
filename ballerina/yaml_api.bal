@@ -94,16 +94,14 @@ public enum YAMLSchema {
 }
 
 # Represent the options that can be used for filtering in the projection.
-#
-# + schema - field description  
-# + allowAnchorRedefinition - field description  
-# + allowMapEntryRedefinition - field description
-# + allowDataProjection - Enable or disable projection
-# + enableConstraintValidation - Enable or disable constraint validation
 public type Options record {|
+    # + schema - field description
     YAMLSchema schema = CORE_SCHEMA;
+    # + allowAnchorRedefinition - field description
     boolean allowAnchorRedefinition = true;
+    # + allowMapEntryRedefinition - field description
     boolean allowMapEntryRedefinition = false;
+    # + allowDataProjection - Enable or disable projection
     record {
         # If `true`, nil values will be considered as optional fields in the projection.
         boolean nilAsOptionalField = false;
@@ -112,27 +110,27 @@ public type Options record {|
         # If `true`, top level tuple ordering considered strictly.
         boolean strictTupleOrder = false;
     }|false allowDataProjection = {};
+    # + enableConstraintValidation - Enable or disable constraint validation
     boolean enableConstraintValidation = true;
 |};
 
 # Configurations for writing a YAML document.
-#
-# + indentationPolicy - Number of whitespace for an indentation
-# + blockLevel - The maximum depth level for a block collection
-# + canonical - If set, the tags are written along with the nodes
-# + useSingleQuotes - If set, single quotes are used to surround scalars
-# + forceQuotes - If set, all the scalars are surrounded by quotes
-# + schema - YAML schema used for writing
-# + isStream - If set, the parser will write a stream of YAML documents
-# + flowStyle - If set, mappings and sequences will output in flow style
 public type WriteConfig record {|
+    # + indentationPolicy - Number of whitespace for an indentation
     int indentationPolicy = 2;
+    # + blockLevel - The maximum depth level for a block collection
     int blockLevel = 1;
+    # + canonical - If set, the tags are written along with the nodes
     boolean canonical = false;
+    # + useSingleQuotes - If set, single quotes are used to surround scalars
     boolean useSingleQuotes = false;
+    # + forceQuotes - If set, all the scalars are surrounded by quotes
     boolean forceQuotes = false;
+    # + schema - YAML schema used for writing
     YAMLSchema schema = CORE_SCHEMA;
+    # + isStream - If set, the parser will write a stream of YAML documents
     boolean isStream = false;
+    # + flowStyle - If set, mappings and sequences will output in flow style
     boolean flowStyle = false;
 |};
 
@@ -141,9 +139,8 @@ public type WriteConfig record {|
 public type Error distinct error;
 
 # Defines the name of the JSON Object key.
-#
-# + value - The name of the JSON Object key
 public type NameConfig record {|
+    # + value - The name of the JSON Object key
     string value;
 |};
 
