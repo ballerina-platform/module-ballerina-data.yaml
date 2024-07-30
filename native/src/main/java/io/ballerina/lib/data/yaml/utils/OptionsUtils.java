@@ -37,18 +37,17 @@ public class OptionsUtils {
     }
 
     public static WriteConfig resolveWriteOptions(BMap<BString, Object> options) {
-        Object indentationPolicy = options.get(Constants.INDENTATION_POLICY);
-        Object blockLevel = options.get(Constants.BLOCK_LEVEL);
-        Object canonical = options.get(Constants.CANONICAL);
-        Object useSingleQuotes = options.get(Constants.USE_SINGLE_QUOTES);
-        Object forceQuotes = options.get(Constants.FORCE_QUOTES);
-        Object schema = options.get(Constants.SCHEMA);
-        Object isStream = options.get(Constants.IS_STREAM);
-        Object flowStyle = options.get(Constants.FLOW_STYLE);
+        Long indentationPolicy = (Long) options.get(Constants.INDENTATION_POLICY);
+        Long blockLevel = (Long) options.get(Constants.BLOCK_LEVEL);
+        Boolean canonical = (Boolean) options.get(Constants.CANONICAL);
+        Boolean useSingleQuotes = (Boolean) options.get(Constants.USE_SINGLE_QUOTES);
+        Boolean forceQuotes = (Boolean) options.get(Constants.FORCE_QUOTES);
+        BString schema = (BString) options.get(Constants.SCHEMA);
+        Boolean isStream = (Boolean) options.get(Constants.IS_STREAM);
+        Boolean flowStyle = (Boolean) options.get(Constants.FLOW_STYLE);
 
-        return new WriteConfig(Math.toIntExact(((Long) indentationPolicy)), Math.toIntExact(((Long) blockLevel)),
-                ((Boolean) canonical), ((Boolean) useSingleQuotes), ((Boolean) forceQuotes),
-                Types.YAMLSchema.valueOf(((BString) schema).getValue()), ((Boolean) isStream), ((Boolean) flowStyle));
+        return new WriteConfig(Math.toIntExact(indentationPolicy), Math.toIntExact(blockLevel), canonical,
+                useSingleQuotes, forceQuotes, Types.YAMLSchema.valueOf(schema.getValue()), isStream, flowStyle);
     }
 
     public record ReadConfig(Types.YAMLSchema schema, boolean allowAnchorRedefinition,
@@ -57,22 +56,21 @@ public class OptionsUtils {
     }
 
     public static ReadConfig resolveReadConfig(BMap<BString, Object> options) {
-        Object schema = options.get(Constants.SCHEMA);
-        Object allowAnchorRedefinition = options.get(Constants.ALLOW_ANCHOR_REDEFINITION);
-        Object allowMapEntryRedefinition = options.get(Constants.ALLOW_MAP_ENTRY_REDEFINITION);
+        BString schema = (BString) options.get(Constants.SCHEMA);
+        Boolean allowAnchorRedefinition = (Boolean) options.get(Constants.ALLOW_ANCHOR_REDEFINITION);
+        Boolean allowMapEntryRedefinition = (Boolean) options.get(Constants.ALLOW_MAP_ENTRY_REDEFINITION);
         Object allowDataProjection = options.get(Constants.ALLOW_DATA_PROJECTION);
-        Object isStream = options.get(Constants.IS_STREAM);
         if (allowDataProjection instanceof Boolean) {
-            return new ReadConfig(Types.YAMLSchema.valueOf(((BString) schema).getValue()),
-                    ((Boolean) allowAnchorRedefinition), ((Boolean) allowMapEntryRedefinition),
-                    false, false, false, false);
+            return new ReadConfig(Types.YAMLSchema.valueOf(schema.getValue()), allowAnchorRedefinition,
+                    allowMapEntryRedefinition, false, false, false, false);
         }
-        Object nilAsOptionalField = ((BMap<?, ?>) allowDataProjection).get(Constants.NIL_AS_OPTIONAL_FIELD);
-        Object absentAsNilableType = ((BMap<?, ?>) allowDataProjection).get(Constants.ABSENT_AS_NILABLE_TYPE);
-        Object strictTupleOrder = ((BMap<?, ?>) allowDataProjection).get(Constants.STRICT_TUPLE_ORDER);
+        Boolean nilAsOptionalField = (Boolean) ((BMap<?, ?>) allowDataProjection).get(Constants.NIL_AS_OPTIONAL_FIELD);
+        Boolean absentAsNilableType = (Boolean) ((BMap<?, ?>) allowDataProjection).
+                get(Constants.ABSENT_AS_NILABLE_TYPE);
+        Boolean strictTupleOrder = (Boolean) ((BMap<?, ?>) allowDataProjection).get(Constants.STRICT_TUPLE_ORDER);
 
-        return new ReadConfig(Types.YAMLSchema.valueOf(((BString) schema).getValue()),
-                ((Boolean) allowAnchorRedefinition), ((Boolean) allowMapEntryRedefinition), true,
-                ((Boolean) nilAsOptionalField), ((Boolean) absentAsNilableType), ((Boolean) strictTupleOrder));
+        return new ReadConfig(Types.YAMLSchema.valueOf(schema.getValue()), allowAnchorRedefinition,
+                allowMapEntryRedefinition, true, nilAsOptionalField, absentAsNilableType,
+                strictTupleOrder);
     }
 }
