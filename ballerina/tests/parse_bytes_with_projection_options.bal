@@ -23,7 +23,7 @@ final Options & readonly options1 = {
     allowDataProjection: {
         nilAsOptionalField: true,
         absentAsNilableType: false,
-        strictTupleOrder: false
+        enableYamlStreamReorder: false
     }
 };
 
@@ -31,7 +31,7 @@ final Options & readonly options2 = {
     allowDataProjection: {
         nilAsOptionalField: false,
         absentAsNilableType: true,
-        strictTupleOrder: false
+        enableYamlStreamReorder: false
     }
 };
 
@@ -39,7 +39,7 @@ final Options & readonly options3 = {
     allowDataProjection: {
         nilAsOptionalField: true,
         absentAsNilableType: true,
-        strictTupleOrder: false
+        enableYamlStreamReorder: false
     }
 };
 

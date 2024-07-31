@@ -50,7 +50,7 @@ public class Constants {
     public static final BString ALLOW_DATA_PROJECTION = StringUtils.fromString("allowDataProjection");
     public static final BString NIL_AS_OPTIONAL_FIELD = StringUtils.fromString("nilAsOptionalField");
     public static final BString ABSENT_AS_NILABLE_TYPE = StringUtils.fromString("absentAsNilableType");
-    public static final BString STRICT_TUPLE_ORDER = StringUtils.fromString("strictTupleOrder");
+    public static final BString ENABLE_YAML_STREAM_REORDER = StringUtils.fromString("enableYamlStreamReorder");
     public static final BString ENABLE_CONSTRAINT_VALIDATION = StringUtils.fromString("enableConstraintValidation");
     public static final BString START_OF_YAML_DOCUMENT = StringUtils.fromString("---");
 

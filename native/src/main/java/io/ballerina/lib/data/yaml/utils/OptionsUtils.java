@@ -52,7 +52,7 @@ public class OptionsUtils {
 
     public record ReadConfig(Types.YAMLSchema schema, boolean allowAnchorRedefinition,
                              boolean allowMapEntryRedefinition, boolean allowDataProjection,
-                             boolean nilAsOptionalField, boolean absentAsNilableType, boolean strictTupleOrder) {
+                             boolean nilAsOptionalField, boolean absentAsNilableType, boolean enableYamlStreamReorder) {
     }
 
     public static ReadConfig resolveReadConfig(BMap<BString, Object> options) {
@@ -67,10 +67,11 @@ public class OptionsUtils {
         Boolean nilAsOptionalField = (Boolean) ((BMap<?, ?>) allowDataProjection).get(Constants.NIL_AS_OPTIONAL_FIELD);
         Boolean absentAsNilableType = (Boolean) ((BMap<?, ?>) allowDataProjection).
                 get(Constants.ABSENT_AS_NILABLE_TYPE);
-        Boolean strictTupleOrder = (Boolean) ((BMap<?, ?>) allowDataProjection).get(Constants.STRICT_TUPLE_ORDER);
+        Boolean enableYamlStreamReorder = (Boolean) ((BMap<?, ?>) allowDataProjection)
+                .get(Constants.ENABLE_YAML_STREAM_REORDER);
 
         return new ReadConfig(Types.YAMLSchema.valueOf(schema.getValue()), allowAnchorRedefinition,
                 allowMapEntryRedefinition, true, nilAsOptionalField, absentAsNilableType,
-                strictTupleOrder);
+                enableYamlStreamReorder);
     }
 }

@@ -107,8 +107,8 @@ public type Options record {|
         boolean nilAsOptionalField = false;
         # If `true`, absent fields will be considered as nilable types in the projection.
         boolean absentAsNilableType = false;
-        # If `true`, top level tuple ordering considered strictly.
-        boolean strictTupleOrder = false;
+        # If `true`, yaml document to top level tuple value will re-ordered.
+        boolean enableYamlStreamReorder = false;
     }|false allowDataProjection = {};
     # enableConstraintValidation - Enable or disable constraint validation
     boolean enableConstraintValidation = true;
