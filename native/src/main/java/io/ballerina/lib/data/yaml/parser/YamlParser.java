@@ -604,7 +604,7 @@ public class YamlParser {
             composeDocument(state, event);
             event = getNextYamlDocEvent(state);
 
-            if (!isTupleExpected || state.enableYamlStreamReorder) {
+            if (!isTupleExpected || !state.enableYamlStreamReorder) {
                 state.updateIndexOfArrayElement();
             }
             if (!processFirstElement && state.expectedTypes.size() > 1) {
@@ -626,7 +626,7 @@ public class YamlParser {
                     continue;
                 } else {
                     TupleType tupleType = (TupleType) peekType;
-                    if (!state.enableYamlStreamReorder) {
+                    if (state.enableYamlStreamReorder) {
                         state.dynamicTupleState = new DynamicTupleState(tupleType);
                     }
                     List<Type> tupleTypes = tupleType.getTupleTypes();
@@ -637,7 +637,7 @@ public class YamlParser {
                         elementType = restType;
                     }
                 }
-                if (isTupleExpected && !state.enableYamlStreamReorder) {
+                if (isTupleExpected && state.enableYamlStreamReorder) {
                     DynamicTupleState dynamicTupleState = state.dynamicTupleState;
                     state.expectedTypes.add(dynamicTupleState.tupleMembersUnion);
                     state.unionDepth = 0;
@@ -692,7 +692,7 @@ public class YamlParser {
                 }
             }
 
-            if (isTupleExpected && !state.enableYamlStreamReorder) {
+            if (isTupleExpected && state.enableYamlStreamReorder) {
                 BArray bArray = (BArray) state.currentYamlNode;
                 state.expectedTypes.pop();
                 state.expectedTypes.add(state.dynamicTupleState.tupleMembersUnion);
@@ -721,7 +721,7 @@ public class YamlParser {
             }
         }
 
-        if (!state.enableYamlStreamReorder && state.dynamicTupleState != null
+        if (state.enableYamlStreamReorder && state.dynamicTupleState != null
                 && !state.dynamicTupleState.isTupleValueCompleted()) {
             throw DiagnosticLog.error(DiagnosticErrorCode.ARRAY_SIZE_MISMATCH);
         }

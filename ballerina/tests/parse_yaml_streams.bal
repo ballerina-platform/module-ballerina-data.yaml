@@ -19,6 +19,14 @@ import ballerina/test;
 
 const YAML_STREAM_TEST_PATH = FILE_PATH + "streams/";
 
+final Options & readonly enableYamlStreamReorderOptions = {
+    allowDataProjection: {
+        nilAsOptionalField: false,
+        absentAsNilableType: false,
+        enableYamlStreamReorder: true
+    }
+};
+
 @test:Config
 isolated function testYamlStringParsing() returns error? {
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(YAML_STREAM_TEST_PATH + "stream_1.yaml");
@@ -103,7 +111,7 @@ isolated function testYamlStreamPastingWithTupleExpected() returns error? {
 isolated function testYamlStreamPastingWithTupleExpected2() returns error? {
     string filePath = YAML_STREAM_TEST_PATH + "stream_1.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
-    [DeploymentType, ServiceType, ConfigType] result = check parseStream(streamResult);
+    [DeploymentType, ServiceType, ConfigType] result = check parseStream(streamResult, enableYamlStreamReorderOptions);
 
     final ConfigType configMapValue = {
         "apiVersion": "v1",
@@ -127,7 +135,8 @@ isolated function testYamlStreamPastingWithTupleExpected2() returns error? {
 isolated function testYamlStreamPastingWithTupleExpected3() returns error? {
     string filePath = YAML_STREAM_TEST_PATH + "stream_1.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
-    [DeploymentType, ServiceType, ConfigType, ConfigType...] result = check parseStream(streamResult);
+    [DeploymentType, ServiceType, ConfigType, ConfigType...] result = check parseStream(streamResult,
+        enableYamlStreamReorderOptions);
 
     final ConfigType configMapValue = {
         "apiVersion": "v1",
@@ -151,7 +160,7 @@ isolated function testYamlStreamPastingWithTupleExpected3() returns error? {
 isolated function testYamlStreamPastingWithTupleExpected4() returns error? {
     string filePath = YAML_STREAM_TEST_PATH + "stream_1.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
-    [ConfigType, ServiceType, ConfigType...] result = check parseStream(streamResult);
+    [ConfigType, ServiceType, ConfigType...] result = check parseStream(streamResult, enableYamlStreamReorderOptions);
 
     final ConfigType configMapValue = {
         "apiVersion": "v1",
@@ -175,7 +184,7 @@ isolated function testYamlStreamPastingWithTupleExpected4() returns error? {
 isolated function testYamlStreamPastingWithTupleExpected5() returns error? {
     string filePath = YAML_STREAM_TEST_PATH + "stream_2.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
-    [ServiceType, int...] result = check parseStream(streamResult);
+    [ServiceType, int...] result = check parseStream(streamResult, enableYamlStreamReorderOptions);
 
     test:assertEquals(result.length(), 4);
     test:assertEquals(result[1], 0);
@@ -187,7 +196,7 @@ isolated function testYamlStreamPastingWithTupleExpected5() returns error? {
 isolated function testYamlStreamPastingWithTupleExpected6() returns error? {
     string filePath = YAML_STREAM_TEST_PATH + "stream_3.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
-    [T1, T1|T2, T2, T3, T3|T2, T2|T3, T1...] result = check parseStream(streamResult);
+    [T1, T1|T2, T2, T3, T3|T2, T2|T3, T1...] result = check parseStream(streamResult, enableYamlStreamReorderOptions);
     [T1, T1|T2, T2, T3, T3|T2, T2|T3, T1...] expectedResult = [
         {"p1": "T1_0"},
         {"p1": "T1_1"},
@@ -207,7 +216,7 @@ isolated function testYamlStreamPastingWithTupleExpected6() returns error? {
 isolated function testParsingStreamOfBasicValues() returns error? {
     string filePath = YAML_STREAM_TEST_PATH + "stream_4.yaml";
     stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
-    [int, float, string, (), boolean, float] result = check parseStream(streamResult);
+    [int, float, string, (), boolean, float] result = check parseStream(streamResult, enableYamlStreamReorderOptions);
     [int, float, string, (), boolean, float] expectedResult = [
         234, 12.34, "string", (), true, 12.11
     ];
