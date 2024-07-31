@@ -29,8 +29,8 @@ isolated function testYamlStringParsing() returns error? {
 
 @test:Config
 isolated function testYamlStringParsing2() returns error? {
-    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
-    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    string filePath = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
     ExpectedType result = check parseStream(streamResult);
 
     final ConfigType configMapValue = {
@@ -53,8 +53,8 @@ isolated function testYamlStringParsing2() returns error? {
 
 @test:Config
 isolated function testYamlStringParsing3() returns error? {
-    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
-    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    string filePath = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
     UnionType[] result = check parseStream(streamResult);
 
     final ConfigType configMapValue = {
@@ -77,8 +77,8 @@ isolated function testYamlStringParsing3() returns error? {
 
 @test:Config
 isolated function testYamlStreamPastingWithTupleExpected() returns error? {
-    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
-    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    string filePath = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
     [ServiceType, ConfigType, ConfigType, DeploymentType] result = check parseStream(streamResult);
 
     final ConfigType configMapValue = {
@@ -101,8 +101,8 @@ isolated function testYamlStreamPastingWithTupleExpected() returns error? {
 
 @test:Config
 isolated function testYamlStreamPastingWithTupleExpected2() returns error? {
-    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
-    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    string filePath = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
     [DeploymentType, ServiceType, ConfigType] result = check parseStream(streamResult);
 
     final ConfigType configMapValue = {
@@ -125,8 +125,8 @@ isolated function testYamlStreamPastingWithTupleExpected2() returns error? {
 
 @test:Config
 isolated function testYamlStreamPastingWithTupleExpected3() returns error? {
-    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
-    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    string filePath = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
     [DeploymentType, ServiceType, ConfigType, ConfigType...] result = check parseStream(streamResult);
 
     final ConfigType configMapValue = {
@@ -149,8 +149,8 @@ isolated function testYamlStreamPastingWithTupleExpected3() returns error? {
 
 @test:Config
 isolated function testYamlStreamPastingWithTupleExpected4() returns error? {
-    string filePaht = YAML_STREAM_TEST_PATH + "stream_1.yaml";
-    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    string filePath = YAML_STREAM_TEST_PATH + "stream_1.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
     [ConfigType, ServiceType, ConfigType...] result = check parseStream(streamResult);
 
     final ConfigType configMapValue = {
@@ -173,8 +173,8 @@ isolated function testYamlStreamPastingWithTupleExpected4() returns error? {
 
 @test:Config
 isolated function testYamlStreamPastingWithTupleExpected5() returns error? {
-    string filePaht = YAML_STREAM_TEST_PATH + "stream_2.yaml";
-    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    string filePath = YAML_STREAM_TEST_PATH + "stream_2.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
     [ServiceType, int...] result = check parseStream(streamResult);
 
     test:assertEquals(result.length(), 4);
@@ -185,8 +185,8 @@ isolated function testYamlStreamPastingWithTupleExpected5() returns error? {
 
 @test:Config
 isolated function testYamlStreamPastingWithTupleExpected6() returns error? {
-    string filePaht = YAML_STREAM_TEST_PATH + "stream_3.yaml";
-    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    string filePath = YAML_STREAM_TEST_PATH + "stream_3.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
     [T1, T1|T2, T2, T3, T3|T2, T2|T3, T1...] result = check parseStream(streamResult);
     [T1, T1|T2, T2, T3, T3|T2, T2|T3, T1...] expectedResult = [
         {"p1": "T1_0"},
@@ -205,8 +205,8 @@ isolated function testYamlStreamPastingWithTupleExpected6() returns error? {
 
 @test:Config
 isolated function testParsingStreamOfBasicValues() returns error? {
-    string filePaht = YAML_STREAM_TEST_PATH + "stream_4.yaml";
-    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePaht);
+    string filePath = YAML_STREAM_TEST_PATH + "stream_4.yaml";
+    stream<io:Block, io:Error?> streamResult = check io:fileReadBlocksAsStream(filePath);
     [int, float, string, (), boolean, float] result = check parseStream(streamResult);
     [int, float, string, (), boolean, float] expectedResult = [
         234, 12.34, "string", (), true, 12.11
