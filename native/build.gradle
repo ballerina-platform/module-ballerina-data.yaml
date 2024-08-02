@@ -33,6 +33,8 @@ dependencies {
     implementation group: 'org.ballerinalang', name: 'ballerina-lang', version: "${ballerinaLangVersion}"
     implementation group: 'org.ballerinalang', name: 'ballerina-runtime', version: "${ballerinaLangVersion}"
     implementation group: 'org.ballerinalang', name: 'value', version: "${ballerinaLangVersion}"
+    implementation group: 'io.ballerina.stdlib', name: 'constraint-native', version: "${stdlibConstraintVersion}"
+
 }
 
 checkstyle {
@@ -73,5 +75,27 @@ compileJava {
                 '--module-path', classpath.asPath,
         ]
         classpath = files()
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            groupId project.group
+            artifactId "data.yaml-native"
+            version = project.version
+            artifact jar
+        }
+    }
+
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/ballerina-platform/module-ballerina-data.yaml")
+            credentials {
+                username = System.getenv("publishUser")
+                password = System.getenv("publishPAT")
+            }
+        }
     }
 }

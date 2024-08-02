@@ -1,0 +1,6 @@
+[plugin]
+id = "constraint-compiler-plugin"
+class = "io.ballerina.lib.data.yaml.compiler.YamlDataCompilerPlugin"
+
+[[dependency]]
+path = "../compiler-plugin/build/libs/data.yaml-compiler-plugin-@project.version@.jar"

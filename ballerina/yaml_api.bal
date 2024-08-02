@@ -16,16 +16,72 @@
 
 import ballerina/jballerina.java;
 
-# Converts YAML string, byte[] or byte-block-stream to subtype of anydata.
+const NEW_LINE_CHARACTER = "\n";
+
+# Converts YAML string to subtype of anydata.
 #
-# + s - Source YAML string value or byte[] or byte-block-stream
+# ```ballerina
+# json value = yaml:parseString("name: Ballerina");
+# value ⇒ {"name": "Ballerina"}
+# ```
+# 
+# + s - Source string value
 # + options - Options to be used for filtering in the projection
 # + t - Target type
 # + return - On success, returns the given target type value, else returns an `yaml:Error`
-public isolated function fromYamlStringWithType(string|byte[]|stream<byte[], error?> s,
+public isolated function parseString(string s,
         Options options = {}, typedesc<anydata> t = <>)
-        returns t|Error = @java:Method {'class: "io.ballerina.stdlib.data.yaml.Native"} external;
-        
+    returns t|Error = @java:Method {'class: "io.ballerina.lib.data.yaml.Native"} external;
+
+# Converts YAML byte[] to subtype of anydata.
+#
+# ```ballerina
+# byte[] content = "name: Ballerina".toBytes();
+# json value = yaml:parseBytes(content);
+# value ⇒ {"name": "Ballerina"}
+# ```
+# 
+# + s - Source byte[] value
+# + options - Options to be used for filtering in the projection
+# + t - Target type
+# + return - On success, returns the given target type value, else returns an `yaml:Error`
+public isolated function parseBytes(byte[] s,
+        Options options = {}, typedesc<anydata> t = <>)
+    returns t|Error = @java:Method {'class: "io.ballerina.lib.data.yaml.Native"} external;
+
+# Converts YAML byte-block-stream to subtype of anydata.
+#
+# ```ballerina
+# stream<byte[], error?> content = getStream();
+# json value = yaml:parseStream(content);
+# value ⇒ {"name": "Ballerina"}
+# ```
+# 
+# + s - Source byte-block-stream value
+# + options - Options to be used for filtering in the projection
+# + t - Target type
+# + return - On success, returns the given target type value, else returns an `yaml:Error`
+public isolated function parseStream(stream<byte[], error?> s,
+        Options options = {}, typedesc<anydata> t = <>)
+    returns t|Error = @java:Method {'class: "io.ballerina.lib.data.yaml.Native"} external;
+
+# Converts anydata YAML value to a string.
+#
+# ```ballerina
+# yaml:toYamlString({"name": "Ballerina"}) ⇒ "name: Ballerina"
+# ```
+# 
+# + yamlValue - Input yaml value
+# + config - Options used to get desired toString representation
+# + return - On success, returns to string value, else returns an `yaml:Error`
+public isolated function toYamlString(anydata yamlValue, WriteConfig config = {}) returns string|Error {
+    string[] lines = check toYamlStringArray(yamlValue, config);
+    return NEW_LINE_CHARACTER.'join(...lines);
+}
+
+isolated function toYamlStringArray(anydata yamlValue, WriteConfig config = {})
+    returns string[]|Error = @java:Method {'class: "io.ballerina.lib.data.yaml.Native"} external;
+
 # Represents the YAML schema available for the parser.
 #
 # + FAILSAFE_SCHEMA - Generic schema that works for any YAML document
@@ -38,16 +94,55 @@ public enum YAMLSchema {
 }
 
 # Represent the options that can be used for filtering in the projection.
-#
-# + schema - field description  
-# + allowAnchorRedefinition - field description  
-# + allowMapEntryRedefinition - field description
-public type Options record {
+public type Options record {|
+    # schema - field description
     YAMLSchema schema = CORE_SCHEMA;
+    # allowAnchorRedefinition - field description
     boolean allowAnchorRedefinition = true;
+    # allowMapEntryRedefinition - field description
     boolean allowMapEntryRedefinition = false;
-};
+    # allowDataProjection - Enable or disable projection
+    record {
+        # If `true`, nil values will be considered as optional fields in the projection.
+        boolean nilAsOptionalField = false;
+        # If `true`, absent fields will be considered as nilable types in the projection.
+        boolean absentAsNilableType = false;
+        # If `true`, yaml document to top level tuple value will re-ordered.
+        boolean enableYamlStreamReorder = false;
+    }|false allowDataProjection = {};
+    # enableConstraintValidation - Enable or disable constraint validation
+    boolean enableConstraintValidation = true;
+|};
+
+# Configurations for writing a YAML document.
+public type WriteConfig record {|
+    # indentationPolicy - Number of whitespace for an indentation
+    int indentationPolicy = 2;
+    # blockLevel - The maximum depth level for a block collection
+    int blockLevel = 1;
+    # canonical - If set, the tags are written along with the nodes
+    boolean canonical = false;
+    # useSingleQuotes - If set, single quotes are used to surround scalars
+    boolean useSingleQuotes = false;
+    # forceQuotes - If set, all the scalars are surrounded by quotes
+    boolean forceQuotes = false;
+    # schema - YAML schema used for writing
+    YAMLSchema schema = CORE_SCHEMA;
+    # isStream - If set, the parser will write a stream of YAML documents
+    boolean isStream = false;
+    # flowStyle - If set, mappings and sequences will output in flow style
+    boolean flowStyle = false;
+|};
 
 # Represents the error type of the ballerina/data.yaml module. This error type represents any error that can occur
 # during the execution of data.yaml APIs.
 public type Error distinct error;
+
+# Defines the name of the JSON Object key.
+public type NameConfig record {|
+    # value - The name of the JSON Object key
+    string value;
+|};
+
+# The annotation is used to overwrite the existing record field name.
+public const annotation NameConfig Name on record field;

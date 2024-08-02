@@ -1,0 +1,27 @@
+# Define some data with anchors
+user_info: &user
+  name: John Doe
+  email: john.doe@example.com
+  roles: &roles
+    - admin
+    - editor
+
+server_config:
+  # Use the user information anchor
+  owner: *user
+  # Define a sequence of ports
+  ports:
+    - 80
+    - 443
+  host: &host localhost
+  database: &database my_database
+
+# Use the database config anchor again
+web_server:
+  # Override a value from the extended config
+  ports:
+    - 8080
+  database:
+    host: *host
+    database: *database
+  roles: *roles

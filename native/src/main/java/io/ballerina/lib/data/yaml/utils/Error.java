@@ -16,22 +16,34 @@
  * under the License.
  */
 
-package io.ballerina.stdlib.data.yaml;
-
-import io.ballerina.runtime.api.Environment;
-import io.ballerina.runtime.api.values.BMap;
-import io.ballerina.runtime.api.values.BString;
-import io.ballerina.runtime.api.values.BTypedesc;
+package io.ballerina.lib.data.yaml.utils;
 
 /**
- * This class is used to convert json inform of string, byte[], byte-stream to record or json type.
+ * Error class use to handle all the parsing level exceptions.
  *
  * @since 0.1.0
  */
-public class Native {
+public class Error {
 
-    public static Object fromYamlStringWithType(Environment env, Object yamlSource, BMap<BString, Object> options,
-                                                BTypedesc typed) {
-        return null;
+    private Error() {
+    }
+
+    public static class YamlParserException extends Exception {
+        private final int line;
+        private final int column;
+
+        public YamlParserException(String msg, int line, int column) {
+                    super(msg);
+            this.line = line;
+            this.column = column;
+        }
+
+        public int getLine() {
+            return line;
+        }
+
+        public int getColumn() {
+            return column;
+        }
     }
 }
