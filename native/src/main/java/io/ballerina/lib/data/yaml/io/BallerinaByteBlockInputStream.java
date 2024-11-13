@@ -76,7 +76,7 @@ public class BallerinaByteBlockInputStream extends InputStream {
     public void close() throws IOException {
         super.close();
         if (closeMethod != null) {
-            env.getRuntime().call(iterator, closeMethod.getName());
+            env.getRuntime().callMethod(iterator, closeMethod.getName(), null);
         }
     }
 
@@ -86,7 +86,7 @@ public class BallerinaByteBlockInputStream extends InputStream {
 
     private boolean readNextChunk() throws InterruptedException {
         try {
-            Object result = env.getRuntime().call(iterator, nextMethodName);
+            Object result = env.getRuntime().callMethod(iterator, nextMethodName, null);
             if (result == null) {
                 this.done = true;
                 return true;
