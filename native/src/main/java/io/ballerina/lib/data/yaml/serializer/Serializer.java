@@ -20,7 +20,7 @@ package io.ballerina.lib.data.yaml.serializer;
 
 import io.ballerina.lib.data.yaml.common.Types;
 import io.ballerina.lib.data.yaml.common.YamlEvent;
-import io.ballerina.runtime.api.TypeTags;
+import io.ballerina.runtime.api.types.TypeTags;
 import io.ballerina.runtime.api.values.BArray;
 import io.ballerina.runtime.api.values.BMap;
 import io.ballerina.runtime.api.values.BString;
