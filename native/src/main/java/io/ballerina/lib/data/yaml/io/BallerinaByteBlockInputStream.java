@@ -76,10 +76,7 @@ public class BallerinaByteBlockInputStream extends InputStream {
     public void close() throws IOException {
         super.close();
         if (closeMethod != null) {
-            env.yieldAndRun(() -> {
-                env.getRuntime().callMethod(iterator, closeMethod.getName(), null);
-                return null;
-            });
+            env.getRuntime().callMethod(iterator, closeMethod.getName(), null);
         }
     }
 
@@ -88,30 +85,29 @@ public class BallerinaByteBlockInputStream extends InputStream {
     }
 
     private boolean readNextChunk() throws InterruptedException {
-        return env.yieldAndRun(() -> {
-            try {
-                Object result = env.getRuntime().callMethod(iterator, nextMethodName, null);
-                if (result == null) {
-                    this.done = true;
-                    return !this.done;
-                }
-                if (result instanceof BMap<?, ?>) {
-                    BMap<BString, Object> valueRecord = (BMap<BString, Object>) result;
-                    final BString value = Arrays.stream(valueRecord.getKeys()).findFirst().get();
-                    final BArray arrayValue = valueRecord.getArrayValue(value);
-                    currentChunk = arrayValue.getByteArray();
-                } else {
-                    // Case where Completes with an error
-                    this.done = true;
-                }
-            } catch (BError bError) {
-                // Panic with an error
+
+        try {
+            Object result = env.getRuntime().callMethod(iterator, nextMethodName, null);
+            if (result == null) {
                 this.done = true;
-                currentChunk = new byte[0];
-                // TODO : Should we panic here?
+                return !this.done;
             }
-            return !this.done;
-        });
+            if (result instanceof BMap<?, ?>) {
+                BMap<BString, Object> valueRecord = (BMap<BString, Object>) result;
+                final BString value = Arrays.stream(valueRecord.getKeys()).findFirst().get();
+                final BArray arrayValue = valueRecord.getArrayValue(value);
+                currentChunk = arrayValue.getByteArray();
+            } else {
+                // Case where Completes with an error
+                this.done = true;
+            }
+        } catch (BError bError) {
+            // Panic with an error
+            this.done = true;
+            currentChunk = new byte[0];
+            // TODO : Should we panic here?
+        }
+        return !this.done;
     }
 
     public BError getError() {
