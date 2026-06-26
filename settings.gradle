@@ -25,7 +25,6 @@ pluginManagement {
         id "io.ballerina.plugin" version "${ballerinaGradlePluginVersion}"
     }
     repositories {
-        mavenLocal()
         gradlePluginPortal()
         maven {
             url = 'https://maven.pkg.github.com/ballerina-platform/*'
