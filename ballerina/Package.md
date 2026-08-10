@@ -1,9 +1,7 @@
 # Ballerina YAML Data Library
 
-The Ballerina data.yaml library provides robust and flexible functionalities for working with YAML data within 
-Ballerina applications. 
-This library enables developers to seamlessly integrate YAML processing capabilities, 
-ensuring smooth data interchange and configuration management.
+The Ballerina `data.yaml` library converts YAML documents to and from type-safe native Ballerina data types (records, maps, arrays, and more), providing schema-aware YAML data binding for Ballerina applications.
+It is the YAML counterpart of the `data.jsondata` and `data.xmldata` libraries; for plain YAML configuration-file to `json` conversion, use the `ballerina/yaml` module instead.
 
 ## Key Features
 
