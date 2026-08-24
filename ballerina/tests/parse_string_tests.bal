@@ -718,7 +718,10 @@ isolated function testSingletonAsExpectedTypeForParseString() returns error? {
 
 @test:Config
 isolated function testDuplicateKeyInTheStringSource() returns error? {
-
+    anydata|Error result = parseString("a: 1\na: 2");
+    test:assertTrue(result is Error);
+    test:assertEquals((<Error>result).message(),
+        "'cannot have duplicate map entries for 'a'' at line: '2' column: '3'");
 }
 
 @test:Config
