@@ -98,6 +98,14 @@ release {
     }
 }
 
-tasks.named('build') {
-    dependsOn('data.yaml-ballerina:build')
+if (tasks.names.contains('build')) {
+    tasks.named('build') {
+        dependsOn('data.yaml-ballerina:build')
+
+    }
+} else {
+    tasks.register('build') {
+        dependsOn('data.yaml-ballerina:build')
+
+    }
 }
