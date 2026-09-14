@@ -94,7 +94,12 @@ public class TagResolutionUtils {
             throws Error.YamlParserException {
         Matcher matcher = SIMPLE_INT_PATTERN.matcher(value);
         if (matcher.matches()) {
-            return Long.valueOf(value);
+            try {
+                return Long.valueOf(value);
+            } catch (NumberFormatException e) {
+                throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(),
+                        state.getColumn());
+            }
         }
         throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(), state.getColumn());
     }
@@ -115,7 +120,12 @@ public class TagResolutionUtils {
         }
         Matcher matcher = COMPLEX_INT_PATTERN.matcher(value);
         if (matcher.matches()) {
-            return Long.valueOf(value);
+            try {
+                return Long.valueOf(value);
+            } catch (NumberFormatException e) {
+                throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(),
+                        state.getColumn());
+            }
         }
         throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(), state.getColumn());
     }
