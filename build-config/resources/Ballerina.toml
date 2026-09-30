@@ -6,7 +6,7 @@ authors = ["Ballerina"]
 keywords = ["yaml", "Type/Library", "Name/YAML", "Area/Built-in"]
 repository = "https://github.com/ballerina-platform/module-ballerina-data.yaml"
 license = ["Apache-2.0"]
-distribution = "2201.12.0"
+distribution = "2201.14.0"
 
 [platform.java21]
 graalvmCompatible = true
