@@ -950,7 +950,9 @@ public class YamlParser {
             // Cannot have a nested block mapping if a value is assigned
             if (event.getKind() == YamlEvent.EventKind.START_EVENT
                     && !((YamlEvent.StartEvent) event).isFlowStyle()) {
-                throw new RuntimeException("Cannot have nested mapping under a key-pair that is already assigned");
+                throw new Error.YamlParserException(
+                        "cannot have nested mapping under a key-pair that is already assigned",
+                        state.getLine(), state.getColumn());
             }
 
             // Compose the key
