@@ -166,9 +166,10 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
             }
             case TYPE_REFERENCE -> {
                 TypeReferenceTypeSymbol typeRefSymbol = (TypeReferenceTypeSymbol) typeSymbol;
-                // Skip type references already being checked to avoid infinite recursion on recursive types.
+                // Skip type references already on the current path to avoid infinite recursion on recursive types.
                 if (visitedTypeRefs.add(typeRefSymbol)) {
                     checkTypeAndDetectDuplicateFields(typeRefSymbol.typeDescriptor(), ctx, visitedTypeRefs);
+                    visitedTypeRefs.remove(typeRefSymbol);
                 }
             }
             case INTERSECTION -> checkTypeAndDetectDuplicateFields(
@@ -210,9 +211,10 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
                     YamlDataDiagnosticCodes.UNSUPPORTED_TYPE);
             case TYPE_REFERENCE -> {
                 TypeReferenceTypeSymbol typeRefSymbol = (TypeReferenceTypeSymbol) typeSymbol;
-                // Skip type references already being validated to avoid infinite recursion on recursive types.
+                // Skip type references already on the current path to avoid infinite recursion on recursive types.
                 if (visitedTypeRefs.add(typeRefSymbol)) {
                     validateExpectedType(typeRefSymbol.typeDescriptor(), ctx, visitedTypeRefs);
+                    visitedTypeRefs.remove(typeRefSymbol);
                 }
             }
             case INTERSECTION -> validateExpectedType(
