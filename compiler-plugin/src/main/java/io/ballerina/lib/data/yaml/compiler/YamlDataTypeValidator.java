@@ -30,7 +30,6 @@ import io.ballerina.compiler.api.symbols.Symbol;
 import io.ballerina.compiler.api.symbols.SymbolKind;
 import io.ballerina.compiler.api.symbols.TupleTypeSymbol;
 import io.ballerina.compiler.api.symbols.TypeDefinitionSymbol;
-import io.ballerina.compiler.api.symbols.TypeDescKind;
 import io.ballerina.compiler.api.symbols.TypeReferenceTypeSymbol;
 import io.ballerina.compiler.api.symbols.TypeSymbol;
 import io.ballerina.compiler.api.symbols.UnionTypeSymbol;
@@ -61,10 +60,12 @@ import io.ballerina.tools.diagnostics.Location;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static io.ballerina.lib.data.yaml.compiler.Constants.BALLERINA;
 import static io.ballerina.lib.data.yaml.compiler.Constants.DATA_YAML;
@@ -139,31 +140,40 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
 
             TypeSymbol typeSymbol = ((VariableSymbol) symbol.get()).typeDescriptor();
             if (!isParseFunctionOfStringSource(initializer.get())) {
-                checkTypeAndDetectDuplicateFields(typeSymbol, ctx);
+                checkTypeAndDetectDuplicateFields(typeSymbol, ctx, new HashSet<>());
                 continue;
             }
 
-            validateExpectedType(typeSymbol, ctx);
+            validateExpectedType(typeSymbol, ctx, new HashSet<>());
         }
     }
 
-    private void checkTypeAndDetectDuplicateFields(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext ctx) {
+    private void checkTypeAndDetectDuplicateFields(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext ctx,
+                                                   Set<TypeSymbol> visitedTypeRefs) {
         switch (typeSymbol.typeKind()) {
             case RECORD -> detectDuplicateFields((RecordTypeSymbol) typeSymbol, ctx);
-            case ARRAY -> checkTypeAndDetectDuplicateFields(((ArrayTypeSymbol) typeSymbol).memberTypeDescriptor(), ctx);
+            case ARRAY -> checkTypeAndDetectDuplicateFields(((ArrayTypeSymbol) typeSymbol).memberTypeDescriptor(),
+                    ctx, visitedTypeRefs);
             case TUPLE -> {
                 for (TypeSymbol memberType : ((TupleTypeSymbol) typeSymbol).memberTypeDescriptors()) {
-                    checkTypeAndDetectDuplicateFields(memberType, ctx);
+                    checkTypeAndDetectDuplicateFields(memberType, ctx, visitedTypeRefs);
                 }
             }
             case UNION -> {
                 for (TypeSymbol memberType : ((UnionTypeSymbol) typeSymbol).memberTypeDescriptors()) {
-                    checkTypeAndDetectDuplicateFields(memberType, ctx);
+                    checkTypeAndDetectDuplicateFields(memberType, ctx, visitedTypeRefs);
                 }
             }
-            case TYPE_REFERENCE -> checkTypeAndDetectDuplicateFields(
-                    ((TypeReferenceTypeSymbol) typeSymbol).typeDescriptor(), ctx);
-            case INTERSECTION -> checkTypeAndDetectDuplicateFields(getRawType(typeSymbol), ctx);
+            case TYPE_REFERENCE -> {
+                TypeReferenceTypeSymbol typeRefSymbol = (TypeReferenceTypeSymbol) typeSymbol;
+                // Skip type references already on the current path to avoid infinite recursion on recursive types.
+                if (visitedTypeRefs.add(typeRefSymbol)) {
+                    checkTypeAndDetectDuplicateFields(typeRefSymbol.typeDescriptor(), ctx, visitedTypeRefs);
+                    visitedTypeRefs.remove(typeRefSymbol);
+                }
+            }
+            case INTERSECTION -> checkTypeAndDetectDuplicateFields(
+                    ((IntersectionTypeSymbol) typeSymbol).effectiveTypeDescriptor(), ctx, visitedTypeRefs);
         }
     }
 
@@ -188,36 +198,48 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
                 || functionName.contains(Constants.PARSE_STREAM);
     }
 
-    private void validateExpectedType(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext ctx) {
+    private void validateExpectedType(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext ctx,
+                                      Set<TypeSymbol> visitedTypeRefs) {
         typeSymbol.getLocation().ifPresent(location -> currentLocation = location);
         switch (typeSymbol.typeKind()) {
-            case UNION -> validateUnionType((UnionTypeSymbol) typeSymbol, ctx);
-            case RECORD -> validateRecordType((RecordTypeSymbol) typeSymbol, ctx);
-            case ARRAY -> validateExpectedType(((ArrayTypeSymbol) typeSymbol).memberTypeDescriptor(), ctx);
-            case TUPLE -> validateTupleType((TupleTypeSymbol) typeSymbol, ctx);
+            case UNION -> validateUnionType((UnionTypeSymbol) typeSymbol, ctx, visitedTypeRefs);
+            case RECORD -> validateRecordType((RecordTypeSymbol) typeSymbol, ctx, visitedTypeRefs);
+            case ARRAY -> validateExpectedType(((ArrayTypeSymbol) typeSymbol).memberTypeDescriptor(), ctx,
+                    visitedTypeRefs);
+            case TUPLE -> validateTupleType((TupleTypeSymbol) typeSymbol, ctx, visitedTypeRefs);
             case TABLE, XML -> reportDiagnosticInfo(ctx, typeSymbol.getLocation(),
                     YamlDataDiagnosticCodes.UNSUPPORTED_TYPE);
-            case TYPE_REFERENCE -> validateExpectedType(((TypeReferenceTypeSymbol) typeSymbol).typeDescriptor(), ctx);
-            case INTERSECTION -> validateExpectedType(getRawType(typeSymbol), ctx);
+            case TYPE_REFERENCE -> {
+                TypeReferenceTypeSymbol typeRefSymbol = (TypeReferenceTypeSymbol) typeSymbol;
+                // Skip type references already on the current path to avoid infinite recursion on recursive types.
+                if (visitedTypeRefs.add(typeRefSymbol)) {
+                    validateExpectedType(typeRefSymbol.typeDescriptor(), ctx, visitedTypeRefs);
+                    visitedTypeRefs.remove(typeRefSymbol);
+                }
+            }
+            case INTERSECTION -> validateExpectedType(
+                    ((IntersectionTypeSymbol) typeSymbol).effectiveTypeDescriptor(), ctx, visitedTypeRefs);
             default -> { }
         }
     }
 
-    private void validateTupleType(TupleTypeSymbol tupleTypeSymbol, SyntaxNodeAnalysisContext ctx) {
+    private void validateTupleType(TupleTypeSymbol tupleTypeSymbol, SyntaxNodeAnalysisContext ctx,
+                                   Set<TypeSymbol> visitedTypeRefs) {
         for (TypeSymbol memberType : tupleTypeSymbol.memberTypeDescriptors()) {
-            validateExpectedType(memberType, ctx);
+            validateExpectedType(memberType, ctx, visitedTypeRefs);
         }
         Optional<TypeSymbol> restTypeSymbol = tupleTypeSymbol.restTypeDescriptor();
-        restTypeSymbol.ifPresent(typeSymbol -> validateExpectedType(typeSymbol, ctx));
+        restTypeSymbol.ifPresent(typeSymbol -> validateExpectedType(typeSymbol, ctx, visitedTypeRefs));
     }
 
-    private void validateRecordType(RecordTypeSymbol recordTypeSymbol, SyntaxNodeAnalysisContext ctx) {
+    private void validateRecordType(RecordTypeSymbol recordTypeSymbol, SyntaxNodeAnalysisContext ctx,
+                                    Set<TypeSymbol> visitedTypeRefs) {
         List<String> fieldMembers = new ArrayList<>();
 
         for (Map.Entry<String, RecordFieldSymbol> entry : recordTypeSymbol.fieldDescriptors().entrySet()) {
             RecordFieldSymbol fieldSymbol = entry.getValue();
             currentLocation = fieldSymbol.getLocation().orElseGet(() -> currentLocation);
-            validateExpectedType(fieldSymbol.typeDescriptor(), ctx);
+            validateExpectedType(fieldSymbol.typeDescriptor(), ctx, visitedTypeRefs);
             String name = getNameFromAnnotation(entry.getKey(), fieldSymbol.annotAttachments());
             if (fieldMembers.contains(name)) {
                 reportDiagnosticInfo(ctx, fieldSymbol.getLocation(), YamlDataDiagnosticCodes.DUPLICATE_FIELD);
@@ -227,21 +249,12 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
         }
     }
 
-    private void validateUnionType(UnionTypeSymbol unionTypeSymbol, SyntaxNodeAnalysisContext ctx) {
+    private void validateUnionType(UnionTypeSymbol unionTypeSymbol, SyntaxNodeAnalysisContext ctx,
+                                   Set<TypeSymbol> visitedTypeRefs) {
         List<TypeSymbol> memberTypeSymbols = unionTypeSymbol.memberTypeDescriptors();
         for (TypeSymbol memberTypeSymbol : memberTypeSymbols) {
-            validateExpectedType(getRawType(memberTypeSymbol), ctx);
+            validateExpectedType(memberTypeSymbol, ctx, visitedTypeRefs);
         }
-    }
-
-    public static TypeSymbol getRawType(TypeSymbol typeDescriptor) {
-        if (typeDescriptor.typeKind() == TypeDescKind.INTERSECTION) {
-            return getRawType(((IntersectionTypeSymbol) typeDescriptor).effectiveTypeDescriptor());
-        }
-        if (typeDescriptor.typeKind() == TypeDescKind.TYPE_REFERENCE) {
-            return getRawType(((TypeReferenceTypeSymbol) typeDescriptor).typeDescriptor());
-        }
-        return typeDescriptor;
     }
 
     private void reportDiagnosticInfo(SyntaxNodeAnalysisContext ctx, Optional<Location> location,
@@ -263,7 +276,8 @@ public class YamlDataTypeValidator implements AnalysisTask<SyntaxNodeAnalysisCon
             return;
         }
         semanticModel.symbol(moduleVariableDeclarationNode.typedBindingPattern())
-                .ifPresent(symbol -> validateExpectedType(((VariableSymbol) symbol).typeDescriptor(), ctx));
+                .ifPresent(symbol -> validateExpectedType(((VariableSymbol) symbol).typeDescriptor(), ctx,
+                        new HashSet<>()));
     }
 
     private void processTypeDefinitionNode(TypeDefinitionNode typeDefinitionNode, SyntaxNodeAnalysisContext ctx) {
