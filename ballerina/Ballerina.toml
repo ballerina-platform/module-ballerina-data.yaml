@@ -5,6 +5,7 @@ version = "1.0.0"
 authors = ["Ballerina"]
 keywords = ["yaml", "Type/Library", "Name/YAML", "Area/Built-in"]
 repository = "https://github.com/ballerina-platform/module-ballerina-data.yaml"
+icon = "icon.png"
 license = ["Apache-2.0"]
 distribution = "2201.14.0"
 
