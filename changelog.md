@@ -4,7 +4,7 @@ This file contains all the notable changes done to the Ballerina YAML Data packa
 ## [Unreleased]
 
 ### Added
-- [[#3197] Add package icon for the stdlib packages missing a logo in the Integration Store](https://github.com/wso2-enterprise/integration-engineering/issues/3197)
+- [[#9274] Add package icon for the stdlib packages missing a logo in the Integration Store](https://github.com/ballerina-platform/ballerina-library/issues/9274)
 
 ### Fixed
 - [[#9250] Fix compiler plugin crash on variables typed with recursive type aliases](https://github.com/ballerina-platform/ballerina-library/issues/9250)
