@@ -16,7 +16,7 @@ graalvmCompatible = true
 groupId = "io.ballerina.lib"
 artifactId = "yaml-native"
 version = "1.0.0"
-path = "../native/build/libs/data.yaml-native-1.0.0-SNAPSHOT.jar"
+path = "../native/build/libs/data.yaml-native-1.0.0.jar"
 
 
 [[platform.java25.dependency]]
