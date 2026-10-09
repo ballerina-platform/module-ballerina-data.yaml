@@ -957,7 +957,7 @@ public class YamlParser {
             String key = (String) composeNode(state, event, true);
 
             if (!state.allowMapEntryRedefinition && !keys.add(key)) {
-                throw new Error.YamlParserException("cannot have duplicate map entries for '${key.toString()}",
+                throw new Error.YamlParserException("cannot have duplicate map entries for '" + key + "'",
                         state.getLine(), state.getColumn());
             }
             Values.handleFieldName(key, state);
