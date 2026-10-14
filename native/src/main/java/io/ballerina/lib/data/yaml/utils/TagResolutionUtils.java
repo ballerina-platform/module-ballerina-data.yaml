@@ -93,8 +93,13 @@ public class TagResolutionUtils {
     public static Object constructSimpleInt(String value, YamlParser.ComposerState state)
             throws Error.YamlParserException {
         Matcher matcher = SIMPLE_INT_PATTERN.matcher(value);
-        if (matcher.find()) {
-            return Long.valueOf(value);
+        if (matcher.matches()) {
+            try {
+                return Long.valueOf(value);
+            } catch (NumberFormatException e) {
+                throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(),
+                        state.getColumn());
+            }
         }
         throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(), state.getColumn());
     }
@@ -102,15 +107,25 @@ public class TagResolutionUtils {
     public static Object constructInt(String value, YamlParser.ComposerState state)
             throws Error.YamlParserException {
         if (value.length() > 1) {
-            if (value.startsWith(OCTAL_START)) {
-                return Long.parseLong(value.substring(2), 8);
-            } else if (value.startsWith(HEXA_START)) {
-                return Long.parseLong(value.substring(2), 16);
+            try {
+                if (value.startsWith(OCTAL_START)) {
+                    return Long.parseLong(value.substring(2), 8);
+                } else if (value.startsWith(HEXA_START)) {
+                    return Long.parseLong(value.substring(2), 16);
+                }
+            } catch (NumberFormatException e) {
+                throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(),
+                        state.getColumn());
             }
         }
         Matcher matcher = COMPLEX_INT_PATTERN.matcher(value);
-        if (matcher.find()) {
-            return Long.valueOf(value);
+        if (matcher.matches()) {
+            try {
+                return Long.valueOf(value);
+            } catch (NumberFormatException e) {
+                throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(),
+                        state.getColumn());
+            }
         }
         throw new Error.YamlParserException("cannot cast " + value + " to int", state.getLine(), state.getColumn());
     }
@@ -118,7 +133,7 @@ public class TagResolutionUtils {
     public static Object constructSimpleFloat(String value, YamlParser.ComposerState state)
             throws Error.YamlParserException {
         Matcher matcher = SIMPLE_FLOAT_PATTERN.matcher(value);
-        if (matcher.find()) {
+        if (matcher.matches()) {
             return Double.parseDouble(value);
         }
         throw new Error.YamlParserException("cannot cast " + value + " to float", state.getLine(), state.getColumn());
@@ -144,7 +159,7 @@ public class TagResolutionUtils {
             }
         }
         Matcher matcher = COMPLEX_FLOAT_PATTERN.matcher(value);
-        if (matcher.find()) {
+        if (matcher.matches()) {
             return Double.parseDouble(value);
         }
         throw new Error.YamlParserException("cannot cast " + value + " to float", state.getLine(), state.getColumn());
