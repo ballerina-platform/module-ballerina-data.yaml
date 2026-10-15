@@ -3,6 +3,8 @@ This file contains all the notable changes done to the Ballerina YAML Data packa
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-08
+
 ### Added
 - [[#9274] Add package icon for the stdlib packages missing a logo in the Integration Store](https://github.com/ballerina-platform/ballerina-library/issues/9274)
 
