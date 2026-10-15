@@ -12,6 +12,5 @@ This file contains all the notable changes done to the Ballerina YAML Data packa
 - [[#9250] Fix compiler plugin crash on variables typed with recursive type aliases](https://github.com/ballerina-platform/ballerina-library/issues/9250)
 
 ### Changed
+- [[#9301] Regroup standard library packages under new Area categories](https://github.com/ballerina-platform/ballerina-library/issues/9301)
 - [[#9132] Updated Keywords and Reformat README for Connector Store Discoverability](https://github.com/ballerina-platform/ballerina-library/issues/9132)
-- Update the Java platform to 25
-- Upgrade Gradle to 9.5.1 and the Ballerina Gradle plugin to 4.0.0
