@@ -16,6 +16,7 @@
  * under the License.
  */
 
+
 package io.ballerina.lib.data.yaml.serializer;
 
 import io.ballerina.lib.data.yaml.common.Types;
@@ -88,7 +89,7 @@ public class Serializer {
     private static void serializeString(SerializerState state, Object data) {
         String value = data.toString();
         if (value.contains("\n")) {
-            value = state.delimiter + value.replaceAll("\n", "\\n") + state.delimiter;
+            value = state.delimiter + value.replace("\n", "\\n") + state.delimiter;
         } else {
             value = state.forceQuotes ? state.delimiter + value + state.delimiter : value;
         }
