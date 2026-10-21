@@ -1084,3 +1084,13 @@ isolated function testEmptyMappingKey() returns error? {
     anydata result2 = check parseString("{: value}");
     test:assertEquals(result2, expectedValue);
 }
+
+@test:Config
+isolated function testNestedMappingUnderAssignedKeyReturnsError() {
+    string sourceData = string `a: 1
+  b: 2`;
+    json|error val = parseString(sourceData);
+    test:assertTrue(val is error);
+    test:assertEquals((<error>val).message(),
+            "'cannot have nested mapping under a key-pair that is already assigned' at line: '2' column: '5'");
+}
