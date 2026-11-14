@@ -132,6 +132,10 @@ function simpleNegativeTestDataProvider() returns map<[string, string]> {
         "invalid-unicode-4": [
             string `"${"\\d4g"}"`,
             "'invalid escape character' at line: '1' column: '2'"
+        ],
+        "duplicate-map-key": [
+            "a: 1\na: 2",
+            "'cannot have duplicate map entries for 'a'' at line: '2' column: '5'"
         ]
     };
 }
